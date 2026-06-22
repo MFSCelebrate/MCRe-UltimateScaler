@@ -39,28 +39,34 @@ jobs:
       - name: 给 gradlew 加执行权限
         run: chmod +x ./gradlew
 
-      # ========== 核心改动：生成并提取 Minecraft 1.21.8 源码 ==========
-      - name: 生成 Minecraft 源码（用于阅读，不打包进模组）
+      # ========== 核心改动：生成并解压 Minecraft 1.21.8 源码 ==========
+      - name: 生成并解压 Minecraft 源码
         run: |
           ./gradlew genSources
-          # 从 Gradle 缓存中定位 Minecraft 源码 jar
           SOURCE_JAR=$(find ~/.gradle/caches -name "minecraft-1.21.8-*-sources.jar" | head -n 1)
           if [ -f "$SOURCE_JAR" ]; then
-            mkdir -p build/libs
-            cp "$SOURCE_JAR" build/libs/minecraft-1.21.8-sources.jar
-            echo "✅ 成功提取 Minecraft 源码到 build/libs/minecraft-1.21.8-sources.jar"
+            mkdir -p build/mc_src
+            unzip -q "$SOURCE_JAR" -d build/mc_src
+            echo "✅ 源码已解压到 build/mc_src，包含 net/minecraft 目录"
           else
-            echo "⚠️ 未找到源码 jar，可能 genSources 任务未完整执行"
+            echo "⚠️ 未找到源码 jar，跳过解压"
           fi
 
       - name: 执行模组构建（不包含 Minecraft 类）
         run: ./gradlew build --no-daemon
 
-      # ========== 上传产物：模组 Jar（干净）+ 源码 Jar（仅用于阅读） ==========
-      - name: 上传构建产物
+      # ========== 上传产物 1：模组 Jar（干净） ==========
+      - name: 上传模组构建产物
         uses: actions/upload-artifact@v4
         with:
           name: UltimateScaler-${{ github.sha }}
-          path: |
-            build/libs/*.jar
+          path: build/libs/*.jar
           if-no-files-found: error
+
+      # ========== 上传产物 2：已解压的 Minecraft 源码（即开即看） ==========
+      - name: 上传 Minecraft 源码（已解压，可直接浏览）
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-sources-1.21.8
+          path: build/mc_src
+          if-no-files-found: warn
