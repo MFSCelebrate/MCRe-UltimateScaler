@@ -60,6 +60,7 @@ public final class UltimateScalerOptions {
         public boolean bigIntegerRewrite = false;
         public boolean fixEndRings = false;
         public boolean fixChunkGenerationOutOfBound = true;
+        public boolean fixChunkSectionSubSetOverflow = true;
         public boolean expandDatapackValueRange = true;
         public boolean expandWorldBorder = true;
         public boolean fixMineshaftCannotGenerate = true;
@@ -177,6 +178,8 @@ public final class UltimateScalerOptions {
         ConfigManager.writeEntry(CONFIG_PATH, "expandDatapackValueRange", config.expandDatapackValueRange, new String[] {Text.translatable("ultimate_scaler.options.tweaks.expandDatapackValueRange").getString(), Text.translatable("ultimate_scaler.options.tweaks.expandDatapackValueRange.tooltip").getString() + Text.translatable("ultimate_scaler.options.require_restart").getString()});
         ConfigManager.writeEntry(CONFIG_PATH, "fixMineshaftCannotGenerate", config.fixMineshaftCannotGenerate, new String[] {Text.translatable("ultimate_scaler.options.tweaks.fixMineshaftCannotGenerate").getString(), Text.translatable("ultimate_scaler.options.tweaks.fixMineshaftCannotGenerate.tooltip").getString()});
         ConfigManager.writeEntry(CONFIG_PATH, "publicTerrainPos", config.publicTerrainPos, new String[] {Text.translatable("ultimate_scaler.options.server.publicTerrainPos").getString()});
+        ConfigManager.writeEntry(CONFIG_PATH, "fixChunkSectionSubSetOverflow", config.fixChunkSectionSubSetOverflow,
+        new String[]{"修复 ChunkSection 中 subSet 参数顺序，防止坐标溢出导致崩溃"});
     }
 
     /**
