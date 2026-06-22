@@ -1,0 +1,57 @@
+# .github/workflows/build.yml
+# 为 Ultimate Scaler 项目配置的 GitHub Actions 构建流水线
+# 参考 Fabric 官方示例[reference:2]和 gradle-actions 最佳实践[reference:3]
+
+name: build
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main" ]
+  # 允许手动触发
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: 21
+  JAVA_DISTRIBUTION: temurin
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        # 主要用 Java 21，也可以加其他版本做兼容性测试[reference:4]
+        java: [21]
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 校验 Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: 配置 JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ matrix.java }}
+
+      - name: 设置 Gradle 缓存
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # 缓存 Gradle User Home，大幅提速[reference:5]
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: 给 gradlew 加执行权限
+        run: chmod +x ./gradlew
+
+      - name: 执行构建
+        run: ./gradlew build --no-daemon
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: UltimateScaler-${{ github.sha }}
+          path: build/libs/*.jar
+          # 保留所有 jar，包括 shadowJar 和 sourcesJar[reference:6]
+          if-no-files-found: error
