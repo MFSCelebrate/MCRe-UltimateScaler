@@ -1,4 +1,5 @@
 # .github/workflows/build.yml
+# Ultimate Scaler CI 构建流水线（含 Minecraft 源码提取）
 name: build
 
 on:
@@ -36,53 +37,75 @@ jobs:
       - name: 给 gradlew 加执行权限
         run: chmod +x ./gradlew
 
+      # 生成 Minecraft 源码（Loom 会下载反编译产物）
       - name: 生成 Minecraft 源码
         run: ./gradlew genSources
 
       # ============================================================
-      # 核心改动：把能找到的 jar 全部捞出来，打包上传
+      # 核心：提取并打包 Minecraft 相关 jar，尽可能拿纯源码
       # ============================================================
-      - name: 收集并解压 Minecraft 相关 jar
+      - name: 收集并处理 Minecraft 源码
         run: |
           set -e
+          MC_VERSION=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
+          echo "📌 Minecraft 版本: $MC_VERSION"
+
           mkdir -p build/all_jars build/mc_src
 
-          # 1. 先把 fabric-loom 目录下所有 jar 都拷贝出来（一个不漏）
+          # 1. 先把 fabric-loom 下所有 jar 备份（以防万一）
           echo "📦 正在复制 fabric-loom 缓存中的所有 jar..."
           find ~/.gradle/caches/fabric-loom -type f -name "*.jar" -exec cp {} build/all_jars/ \;
           echo "✅ 已复制 $(ls -1 build/all_jars/ | wc -l) 个 jar 文件"
 
-          # 2. 专门寻找真正的源码 jar（merged-unpicked.jar）
-          SOURCE_JAR=$(find ~/.gradle/caches -type f -name "merged-unpicked.jar" | head -1)
-          
+          # 2. 优先搜索纯 sources.jar（里面是 .java 文件）
+          SOURCE_JAR=$(find ~/.gradle/caches -type f -name "*.jar" | grep -E "sources\.jar$" | grep -i minecraft | head -1)
+
+          # 3. 如果没有 sources.jar，退而求其次找 merged-unpicked.jar（里面是 .class）
           if [ -z "$SOURCE_JAR" ]; then
-            # 如果没找到 merged-unpicked，退而求其次找 minecraft-merged.jar
+            echo "⚠️ 未找到纯 sources.jar，回退到 merged-unpicked.jar（字节码）..."
+            SOURCE_JAR=$(find ~/.gradle/caches -type f -name "merged-unpicked.jar" | head -1)
+          fi
+
+          # 4. 如果还没找到，试试 minecraft-merged.jar
+          if [ -z "$SOURCE_JAR" ]; then
+            echo "⚠️ 仍未找到，尝试 minecraft-merged.jar..."
             SOURCE_JAR=$(find ~/.gradle/caches -type f -name "minecraft-merged.jar" | head -1)
           fi
 
+          # 5. 处理找到的 jar
           if [ -n "$SOURCE_JAR" ] && [ -f "$SOURCE_JAR" ]; then
-            echo "✅ 找到源码 jar: $SOURCE_JAR"
-            # 把源码 jar 单独复制一份，方便识别
-            cp "$SOURCE_JAR" build/all_jars/MC-SOURCE-merged-unpicked.jar
-            # 尝试解压到 mc_src
+            echo "✅ 找到候选文件: $SOURCE_JAR"
+            # 复制一份到 all_jars 并重命名，方便识别
+            cp "$SOURCE_JAR" build/all_jars/MC-SOURCE-CANDIDATE.jar
+
+            # 解压到 mc_src
             unzip -q "$SOURCE_JAR" -d build/mc_src
-            if [ -d "build/mc_src/net/minecraft" ]; then
-              echo "✅ 源码解压成功，net/minecraft 目录已就绪"
+            echo "📊 解压完成，统计文件类型："
+            JAVA_COUNT=$(find build/mc_src -name "*.java" | wc -l)
+            CLASS_COUNT=$(find build/mc_src -name "*.class" | wc -l)
+            echo "   Java 文件数 : $JAVA_COUNT"
+            echo "   Class 文件数: $CLASS_COUNT"
+
+            if [ "$JAVA_COUNT" -gt 0 ]; then
+              echo "🎉 成功！里面包含纯 Java 源码，可直接阅读。"
+            elif [ "$CLASS_COUNT" -gt 0 ]; then
+              echo "⚠️ 里面只有 .class 字节码，请用反编译工具（如 CFR）转换为 Java。"
             else
-              echo "⚠️ 解压后未找到 net/minecraft，可能不是完整源码包"
+              echo "❌ 解压后未找到任何 Java 或 Class 文件，可能不是有效的源码包。"
             fi
           else
-            echo "⚠️ 未找到明确的源码 jar，但所有缓存 jar 已打包在 all_jars 中"
+            echo "❌ 未找到任何可用的源码 jar，跳过解压。"
           fi
 
-          # 3. 列出 all_jars 内容，方便排查
+          # 6. 列出 all_jars 内容，方便排查
           echo "📂 all_jars 目录内容："
           ls -lh build/all_jars/
 
-      - name: 执行模组构建（不包含 Minecraft 类）
+      # 执行模组构建（这里会生成不含 Minecraft 类的模组 Jar）
+      - name: 执行模组构建
         run: ./gradlew build --no-daemon
 
-      # ========== 上传产物 1：模组 Jar ==========
+      # ========== 上传产物 1：模组 Jar（干净） ==========
       - name: 上传模组构建产物
         uses: actions/upload-artifact@v4
         with:
@@ -90,7 +113,7 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      # ========== 上传产物 2：所有 Minecraft 缓存 jar（备用大礼包） ==========
+      # ========== 上传产物 2：所有 Minecraft 缓存 Jar（备用） ==========
       - name: 上传 Minecraft 缓存 JAR 包（全量）
         uses: actions/upload-artifact@v4
         with:
@@ -98,8 +121,8 @@ jobs:
           path: build/all_jars/*.jar
           if-no-files-found: ignore
 
-      # ========== 上传产物 3：已解压的源码目录（如果成功） ==========
-      - name: 上传 Minecraft 源码（已解压，即开即看）
+      # ========== 上传产物 3：解压后的源码目录（无论 .java 还是 .class） ==========
+      - name: 上传 Minecraft 源码（解压后目录）
         uses: actions/upload-artifact@v4
         with:
           name: minecraft-sources-${{ env.MC_VERSION }}
