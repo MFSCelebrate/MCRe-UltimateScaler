@@ -1,3 +1,4 @@
+// MixinChunkPos.java
 package me.inf32768.ultimate_scaler.mixins.offset;
 
 import net.minecraft.util.math.ChunkPos;
@@ -16,17 +17,13 @@ public abstract class MixinChunkPos {
     @Overwrite
     public static long toLong(int chunkX, int chunkZ) {
         if (!config.expandWorldBorder) {
-            return vanillaToLong(chunkX, chunkZ);
+            // 原版逻辑（原版已经是 64 位打包，无需修改）
+            return ((long) chunkX & 0xFFFFFFFFL) << 32 | ((long) chunkZ & 0xFFFFFFFFL);
         }
-        // 新打包方案：X 用 32 位，Z 用 32 位（区块坐标）
+        // 新打包方案：X 用 32 位，Z 用 32 位
         long packed = 0L;
         packed |= ((long) chunkX & 0xFFFFFFFFL) << 32;
         packed |= ((long) chunkZ & 0xFFFFFFFFL);
         return packed;
-    }
-
-    // 原版算法（回退用）
-    private static long vanillaToLong(int chunkX, int chunkZ) {
-        return ((long) chunkX & 0xFFFFFFFFL) << 32 | ((long) chunkZ & 0xFFFFFFFFL);
     }
 }
