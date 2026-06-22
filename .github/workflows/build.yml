@@ -37,25 +37,71 @@ jobs:
         run: chmod +x ./gradlew
 
       # ============================================================
-      # 强制生成未混淆源码到 build/genSources
+      # 生成映射后的 .class（genSources 会下载映射并应用到字节码）
       # ============================================================
-      - name: 生成未混淆源码
-        id: gen_sources
-        run: |
-          # 删除可能存在的旧目录，确保重新生成
-          rm -rf build/genSources
-          # 执行 genSources，--rerun-tasks 保证重新反编译
-          ./gradlew genSources --rerun-tasks --no-daemon
+      - name: 生成映射后的字节码
+        run: ./gradlew genSources --no-daemon
 
-          # 检查目标文件是否存在
-          if [ -f "build/genSources/net/minecraft/client/MinecraftClient.java" ]; then
-            echo "✅ 成功生成未混淆源码（MinecraftClient.java 存在）"
-            echo "found_java=true" >> $GITHUB_OUTPUT
-          else
-            echo "❌ 未找到 MinecraftClient.java，生成失败"
-            # 打印 build/genSources 目录结构以协助调试
-            find build/genSources -type f -name "*.java" 2>/dev/null | head -10 || echo "目录为空或不存在"
-            echo "found_java=false" >> $GITHUB_OUTPUT
+      # ============================================================
+      # 定位映射后的 .class 目录，并用 CFR 反编译成 Java
+      # ============================================================
+      - name: 反编译映射后的字节码
+        id: decompile
+        run: |
+          mkdir -p build/artifacts
+
+          # 1. 在缓存中搜索映射后的 MinecraftClient.class（Yarn 映射后类名）
+          CLASS_FILE=$(find ~/.gradle/caches -type f -name "MinecraftClient.class" 2>/dev/null | head -1)
+
+          if [ -z "$CLASS_FILE" ]; then
+            # 如果没找到映射后的类名，说明 genSources 可能没执行成功或 Yarn 映射未应用
+            echo "❌ 未找到映射后的 MinecraftClient.class，尝试搜索混淆名 class_310.class..."
+            CLASS_FILE=$(find ~/.gradle/caches -type f -name "class_310.class" 2>/dev/null | head -1)
+            if [ -n "$CLASS_FILE" ]; then
+              echo "⚠️ 只找到混淆类名，说明 Yarn 映射未应用。请检查 genSources 是否成功执行。"
+            else
+              echo "❌ 完全未找到 MinecraftClient 相关类文件"
+              echo "found_java=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          # 2. 如果找到了映射后的类，定位到 net 的父目录
+          if [ -f "$CLASS_FILE" ]; then
+            echo "✅ 找到映射后的类文件: $CLASS_FILE"
+            # 提取 net/minecraft/client 的父目录，即包含整个 net/ 的根
+            SRC_ROOT=$(dirname "$(dirname "$CLASS_FILE")")
+            echo "✅ 源码根目录（映射后）: $SRC_ROOT"
+
+            # 验证目录结构是否正确（应该包含 net/minecraft）
+            if [ -d "$SRC_ROOT/net/minecraft" ]; then
+              echo "✅ 确认包含 net/minecraft 目录"
+
+              # 3. 下载 CFR 反编译器
+              CFR_JAR="build/cfr.jar"
+              if [ ! -f "$CFR_JAR" ]; then
+                echo "📥 正在下载 CFR 反编译器..."
+                wget -q -O "$CFR_JAR" "https://repo1.maven.org/maven2/org/benf/cfr/0.152/cfr-0.152.jar"
+              fi
+
+              # 4. 反编译整个 net/ 目录（映射后的 .class -> .java）
+              echo "🔧 开始反编译映射后的字节码..."
+              java -jar "$CFR_JAR" "$SRC_ROOT" --outputdir build/artifacts/mc_src
+
+              # 5. 验证反编译结果
+              if [ -f "build/artifacts/mc_src/net/minecraft/client/MinecraftClient.java" ]; then
+                echo "🎉 反编译成功！MinecraftClient.java 存在（已应用 Yarn 映射）"
+                JAVA_COUNT=$(find build/artifacts/mc_src -name "*.java" | wc -l)
+                echo "📊 共生成 $JAVA_COUNT 个 Java 文件"
+                echo "found_java=true" >> $GITHUB_OUTPUT
+              else
+                echo "❌ 反编译后未找到 MinecraftClient.java，可能反编译失败"
+                echo "found_java=false" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "❌ 目录结构不正确，缺少 net/minecraft"
+              echo "found_java=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
       # ========== 执行模组构建 ==========
@@ -70,11 +116,11 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      # ========== 上传未混淆源码（如果生成成功） ==========
-      - name: 上传未混淆源码（Yarn 映射后）
-        if: steps.gen_sources.outputs.found_java == 'true'
+      # ========== 上传反编译后的源码（已映射） ==========
+      - name: 上传映射后的源码（反编译）
+        if: steps.decompile.outputs.found_java == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: minecraft-sources-unobfuscated
-          path: build/genSources
+          path: build/artifacts/mc_src
           if-no-files-found: ignore
