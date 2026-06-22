@@ -9,8 +9,9 @@ import static me.inf32768.ultimate_scaler.option.UltimateScalerOptions.config;
 
 /**
  * 修复 ChunkSectionPos.asLong 打包溢出问题。
- * 当坐标超出 ±33554432 时，将坐标钳制到安全范围内（33554400），
- * 而不是让其截断溢出，保留含水层逻辑的同时防止崩溃。
+ * 当坐标超出 ±33554432 时，将坐标钳制到安全范围内（±33554400），
+ * 防止截断导致 LongAVLTreeSet.subSet 参数顺序错误，从而防止崩溃。
+ * 同时保留含水层等所有地形特征（只是被截断在边界处）。
  */
 @Mixin(ChunkSectionPos.class)
 public abstract class MixinChunkSectionPos {
