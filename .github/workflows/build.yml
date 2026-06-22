@@ -36,22 +36,26 @@ jobs:
       - name: 给 gradlew 加执行权限
         run: chmod +x ./gradlew
 
-      # ========== 生成源码（包含反编译） ==========
       - name: 生成 Minecraft 源码
-        id: gen
         run: ./gradlew genSources --no-daemon
 
-      # ========== 定位 Loom 输出的反编译源码目录 ==========
+      # ========== 收集 Loom 反编译源码（健壮版） ==========
       - name: 收集 Loom 反编译源码
+        id: collect_sources
         run: |
-          set -e
           mkdir -p build/artifacts
-
-          # Loom 1.15+ 通常将源码放在 build/tmp/genSources/ 或 build/genSources
-          SOURCE_DIRS=("build/tmp/genSources" "build/genSources")
           FOUND=false
 
-          for dir in "${SOURCE_DIRS[@]}"; do
+          # 1. 尝试多个可能的源码输出目录
+          CANDIDATE_DIRS=(
+            "build/tmp/genSources"
+            "build/genSources"
+            "build/generated/sources"
+            "build/.gen"
+            "build/unpacked"
+          )
+
+          for dir in "${CANDIDATE_DIRS[@]}"; do
             if [ -d "$dir" ] && [ -d "$dir/net/minecraft" ]; then
               echo "✅ 找到反编译源码目录: $dir"
               cp -r "$dir" build/artifacts/mc_src
@@ -60,19 +64,34 @@ jobs:
             fi
           done
 
+          # 2. 如果还没找到，全盘搜索 build/ 下可能包含 net/minecraft 的目录
+          if [ "$FOUND" = false ]; then
+            echo "⚠️ 未在常见目录找到，尝试全盘搜索..."
+            SRC_DIR=$(find build -type d -path "*/net/minecraft" 2>/dev/null | head -1)
+            if [ -n "$SRC_DIR" ] && [ -d "$SRC_DIR" ]; then
+              PARENT_DIR=$(dirname "$SRC_DIR")
+              echo "✅ 通过搜索找到源码目录: $PARENT_DIR"
+              cp -r "$PARENT_DIR" build/artifacts/mc_src
+              FOUND=true
+            fi
+          fi
+
+          # 3. 如果找到了，统计并标记成功
           if [ "$FOUND" = true ]; then
-            echo "🎉 成功获取 Java 源码！"
-            # 统计文件数
-            echo "📊 Java 文件数: $(find build/artifacts/mc_src -name '*.java' | wc -l)"
+            JAVA_COUNT=$(find build/artifacts/mc_src -name "*.java" | wc -l)
+            echo "🎉 成功获取 Java 源码！文件数: $JAVA_COUNT"
+            echo "::set-output name=found_java::true"
           else
-            echo "⚠️ 未找到 Loom 反编译目录，尝试从缓存提取 merged-unpicked.jar（字节码）..."
-            SOURCE_JAR=$(find ~/.gradle/caches -type f -name "merged-unpicked.jar" | head -1)
-            if [ -n "$SOURCE_JAR" ] && [ -f "$SOURCE_JAR" ]; then
+            echo "❌ 未找到 Loom 反编译源码目录，尝试从缓存提取 merged-unpicked.jar（字节码）..."
+            SOURCE_JAR=$(find ~/.gradle/caches -type f -name "merged-unpicked.jar" 2>/dev/null | head -1)
+            if [ -n "$SOURCE_JAR" ] && [ -f "$SOURCE_JAR" ] && [ -s "$SOURCE_JAR" ]; then
               mkdir -p build/artifacts/mc_src
-              unzip -q "$SOURCE_JAR" -d build/artifacts/mc_src
-              echo "📦 已解压 merged-unpicked.jar（含 .class 文件）"
+              unzip -q "$SOURCE_JAR" -d build/artifacts/mc_src 2>/dev/null || echo "解压失败，跳过字节码"
+              echo "📦 已尝试解压 merged-unpicked.jar（可能包含 .class 文件）"
+              echo "::set-output name=found_java::false"
             else
-              echo "❌ 未找到任何可用源码包"
+              echo "⚠️ merged-unpicked.jar 不存在或为空，跳过源码提取"
+              echo "::set-output name=found_java::false"
             fi
           fi
 
@@ -88,10 +107,10 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      # ========== 上传源码（优先 Java，若没有则字节码） ==========
+      # ========== 上传源码（如果有） ==========
       - name: 上传 Minecraft 源码
         uses: actions/upload-artifact@v4
         with:
           name: minecraft-sources
           path: build/artifacts/mc_src
-          if-no-files-found: ignore
+          if-no-files-found: ignore   # 没有也不报错
