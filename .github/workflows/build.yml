@@ -1,5 +1,5 @@
 # .github/workflows/build.yml
-# Ultimate Scaler CI 构建流水线（含 Minecraft 源码提取）
+# Ultimate Scaler CI 构建流水线（含 Minecraft 源码反编译）
 name: build
 
 on:
@@ -37,75 +37,58 @@ jobs:
       - name: 给 gradlew 加执行权限
         run: chmod +x ./gradlew
 
-      # 生成 Minecraft 源码（Loom 会下载反编译产物）
-      - name: 生成 Minecraft 源码
+      - name: 生成 Minecraft 源码（下载字节码包）
         run: ./gradlew genSources
 
       # ============================================================
-      # 核心：提取并打包 Minecraft 相关 jar，尽可能拿纯源码
+      # 核心改动：用 Vineflower 反编译 merged-unpicked.jar
       # ============================================================
-      - name: 收集并处理 Minecraft 源码
+      - name: 反编译 Minecraft 源码
         run: |
           set -e
           MC_VERSION=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
           echo "📌 Minecraft 版本: $MC_VERSION"
 
-          mkdir -p build/all_jars build/mc_src
+          mkdir -p build/mc_src build/all_jars
 
-          # 1. 先把 fabric-loom 下所有 jar 备份（以防万一）
-          echo "📦 正在复制 fabric-loom 缓存中的所有 jar..."
-          find ~/.gradle/caches/fabric-loom -type f -name "*.jar" -exec cp {} build/all_jars/ \;
-          echo "✅ 已复制 $(ls -1 build/all_jars/ | wc -l) 个 jar 文件"
+          # 1. 定位 merged-unpicked.jar
+          SOURCE_JAR=$(find ~/.gradle/caches -type f -name "merged-unpicked.jar" | head -1)
+          if [ -z "$SOURCE_JAR" ] || [ ! -f "$SOURCE_JAR" ]; then
+            echo "❌ 未找到 merged-unpicked.jar，跳过反编译"
+            exit 0
+          fi
+          echo "✅ 找到字节码包: $SOURCE_JAR"
+          cp "$SOURCE_JAR" build/all_jars/merged-unpicked.jar
 
-          # 2. 优先搜索纯 sources.jar（里面是 .java 文件）
-          SOURCE_JAR=$(find ~/.gradle/caches -type f -name "*.jar" | grep -E "sources\.jar$" | grep -i minecraft | head -1)
-
-          # 3. 如果没有 sources.jar，退而求其次找 merged-unpicked.jar（里面是 .class）
-          if [ -z "$SOURCE_JAR" ]; then
-            echo "⚠️ 未找到纯 sources.jar，回退到 merged-unpicked.jar（字节码）..."
-            SOURCE_JAR=$(find ~/.gradle/caches -type f -name "merged-unpicked.jar" | head -1)
+          # 2. 下载 Vineflower 反编译器（如果 Loom 没带，从 Maven 拉）
+          VINEFLOWER_JAR="build/vineflower.jar"
+          if [ ! -f "$VINEFLOWER_JAR" ]; then
+            echo "📥 正在下载 Vineflower 反编译器..."
+            wget -q -O "$VINEFLOWER_JAR" "https://repo1.maven.org/maven2/org/vineflower/vineflower/1.11.0/vineflower-1.11.0.jar"
           fi
 
-          # 4. 如果还没找到，试试 minecraft-merged.jar
-          if [ -z "$SOURCE_JAR" ]; then
-            echo "⚠️ 仍未找到，尝试 minecraft-merged.jar..."
-            SOURCE_JAR=$(find ~/.gradle/caches -type f -name "minecraft-merged.jar" | head -1)
-          fi
+          # 3. 执行反编译
+          echo "🔧 开始反编译 merged-unpicked.jar 到 build/mc_src ..."
+          java -jar "$VINEFLOWER_JAR" --output-dir build/mc_src "$SOURCE_JAR"
 
-          # 5. 处理找到的 jar
-          if [ -n "$SOURCE_JAR" ] && [ -f "$SOURCE_JAR" ]; then
-            echo "✅ 找到候选文件: $SOURCE_JAR"
-            # 复制一份到 all_jars 并重命名，方便识别
-            cp "$SOURCE_JAR" build/all_jars/MC-SOURCE-CANDIDATE.jar
+          # 4. 验证反编译结果
+          JAVA_COUNT=$(find build/mc_src -name "*.java" | wc -l)
+          CLASS_COUNT=$(find build/mc_src -name "*.class" | wc -l)
+          echo "📊 反编译完成统计："
+          echo "   Java 文件数 : $JAVA_COUNT"
+          echo "   Class 文件数: $CLASS_COUNT"
 
-            # 解压到 mc_src
-            unzip -q "$SOURCE_JAR" -d build/mc_src
-            echo "📊 解压完成，统计文件类型："
-            JAVA_COUNT=$(find build/mc_src -name "*.java" | wc -l)
-            CLASS_COUNT=$(find build/mc_src -name "*.class" | wc -l)
-            echo "   Java 文件数 : $JAVA_COUNT"
-            echo "   Class 文件数: $CLASS_COUNT"
-
-            if [ "$JAVA_COUNT" -gt 0 ]; then
-              echo "🎉 成功！里面包含纯 Java 源码，可直接阅读。"
-            elif [ "$CLASS_COUNT" -gt 0 ]; then
-              echo "⚠️ 里面只有 .class 字节码，请用反编译工具（如 CFR）转换为 Java。"
-            else
-              echo "❌ 解压后未找到任何 Java 或 Class 文件，可能不是有效的源码包。"
-            fi
+          if [ "$JAVA_COUNT" -gt 0 ]; then
+            echo "🎉 成功！反编译出纯 Java 源码，可直接阅读。"
           else
-            echo "❌ 未找到任何可用的源码 jar，跳过解压。"
+            echo "⚠️ 反编译未产生任何 Java 文件，请检查 Vineflower 版本或输入包。"
           fi
 
-          # 6. 列出 all_jars 内容，方便排查
-          echo "📂 all_jars 目录内容："
-          ls -lh build/all_jars/
-
-      # 执行模组构建（这里会生成不含 Minecraft 类的模组 Jar）
+      # 执行模组构建
       - name: 执行模组构建
         run: ./gradlew build --no-daemon
 
-      # ========== 上传产物 1：模组 Jar（干净） ==========
+      # ========== 上传产物 1：模组 Jar ==========
       - name: 上传模组构建产物
         uses: actions/upload-artifact@v4
         with:
@@ -113,18 +96,18 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      # ========== 上传产物 2：所有 Minecraft 缓存 Jar（备用） ==========
-      - name: 上传 Minecraft 缓存 JAR 包（全量）
-        uses: actions/upload-artifact@v4
-        with:
-          name: minecraft-cache-all-jars
-          path: build/all_jars/*.jar
-          if-no-files-found: ignore
-
-      # ========== 上传产物 3：解压后的源码目录（无论 .java 还是 .class） ==========
-      - name: 上传 Minecraft 源码（解压后目录）
+      # ========== 上传产物 2：反编译后的 Java 源码 ==========
+      - name: 上传 Minecraft 源码（反编译后，纯 Java）
         uses: actions/upload-artifact@v4
         with:
           name: minecraft-sources-${{ env.MC_VERSION }}
           path: build/mc_src
+          if-no-files-found: ignore
+
+      # ========== 上传产物 3：所有缓存 jar（备用） ==========
+      - name: 上传 Minecraft 缓存 JAR 包（备用）
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-cache-all-jars
+          path: build/all_jars/*.jar
           if-no-files-found: ignore
