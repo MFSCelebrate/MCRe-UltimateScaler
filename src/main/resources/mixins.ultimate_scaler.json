@@ -31,7 +31,7 @@
     "offset.MixinShiftedNoiseSampler",
     "offset.MixinWeirdScaledSampler",
     "offset.MixinYClampedGradient",
-    "fixing.MixinLongAVLTreeSet"
+    "fixing.MixinSectionedEntityCache"
   ],
   "client": [
     "MixinDebugHud",
