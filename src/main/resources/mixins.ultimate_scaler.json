@@ -21,7 +21,6 @@
     "border.MixinWorldBorderProperties",
     "fixing.MixinAbstractChunkHolder",
     "fixing.MixinMineshaftPart",
-    "fixing.MixinChunkNoiseSampler",
     "fixing.MixinAquiferSamplerImpl",
     "offset.MixinEndIslands",
     "offset.MixinInterpolatedNoiseSampler",
