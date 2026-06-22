@@ -36,63 +36,43 @@ jobs:
       - name: 给 gradlew 加执行权限
         run: chmod +x ./gradlew
 
-      - name: 生成 Minecraft 源码
+      # 即使 genSources 不产出源码，我们也要跑一遍以获取缓存
+      - name: 生成 Minecraft 源码（获取缓存）
         run: ./gradlew genSources --no-daemon
 
-      # ========== 全局搜索缓存中的反编译源码 ==========
-      - name: 定位反编译源码（全局搜索缓存）
-        id: locate
+      # ========== 直接用 CFR 反编译 minecraft-merged.jar ==========
+      - name: 反编译 Minecraft 字节码（CFR）
+        id: decompile
         run: |
           mkdir -p build/artifacts
-          FOUND=false
 
-          # 在 gradle 缓存中查找包含 net/minecraft 且含有 .java 文件的目录
-          echo "🔍 正在搜索缓存中的反编译源码..."
-          # 查找所有包含 net/minecraft 的目录（跳过 .jar 文件）
-          CANDIDATE_DIRS=$(find ~/.gradle/caches -type d -path "*/net/minecraft" 2>/dev/null)
-          for dir in $CANDIDATE_DIRS; do
-            PARENT=$(dirname "$dir")
-            # 检查父目录下是否有 .java 文件（可能就在 net/minecraft 下一层）
-            JAVA_COUNT=$(find "$PARENT" -name "*.java" 2>/dev/null | wc -l)
-            if [ "$JAVA_COUNT" -gt 0 ]; then
-              echo "✅ 找到包含 Java 源码的目录: $PARENT"
-              cp -r "$PARENT" build/artifacts/mc_src
-              FOUND=true
-              break
-            fi
-          done
+          # 1. 定位 minecraft-merged.jar（这是原版完整字节码）
+          MERGED_JAR=$(find ~/.gradle/caches -type f -name "minecraft-merged.jar" 2>/dev/null | head -1)
+          if [ -z "$MERGED_JAR" ] || [ ! -f "$MERGED_JAR" ]; then
+            echo "❌ 未找到 minecraft-merged.jar，跳过反编译"
+            echo "found_java=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "✅ 找到 minecraft-merged.jar: $MERGED_JAR"
 
-          # 如果还没找到，尝试搜索整个缓存中所有 .java 文件，并提取它们的父目录
-          if [ "$FOUND" = false ]; then
-            echo "⚠️ 未找到目录，尝试搜索 .java 文件..."
-            JAVA_FILES=$(find ~/.gradle/caches -name "*.java" -path "*/net/minecraft/*" 2>/dev/null | head -20)
-            if [ -n "$JAVA_FILES" ]; then
-              # 取第一个 java 文件的路径，提取 net/minecraft 的父目录
-              FIRST_JAVA=$(echo "$JAVA_FILES" | head -1)
-              # 在路径中定位 net/minecraft 的位置
-              MC_DIR=$(echo "$FIRST_JAVA" | sed -n 's|\(.*/net/minecraft\).*|\1|p' | head -1)
-              if [ -n "$MC_DIR" ] && [ -d "$(dirname "$MC_DIR")" ]; then
-                PARENT=$(dirname "$MC_DIR")
-                echo "✅ 通过 .java 文件定位到目录: $PARENT"
-                cp -r "$PARENT" build/artifacts/mc_src
-                FOUND=true
-              else
-                echo "❌ 无法从 .java 文件路径中提取有效目录"
-              fi
-            fi
+          # 2. 下载 CFR 反编译器
+          CFR_JAR="build/cfr.jar"
+          if [ ! -f "$CFR_JAR" ]; then
+            echo "📥 正在下载 CFR 反编译器..."
+            wget -q -O "$CFR_JAR" "https://repo1.maven.org/maven2/org/benf/cfr/0.152/cfr-0.152.jar"
           fi
 
-          # 如果找到了，统计并标记
-          if [ "$FOUND" = true ]; then
-            JAVA_COUNT=$(find build/artifacts/mc_src -name "*.java" 2>/dev/null | wc -l)
-            CLASS_COUNT=$(find build/artifacts/mc_src -name "*.class" 2>/dev/null | wc -l)
-            echo "🎉 成功获取源码！Java: $JAVA_COUNT, Class: $CLASS_COUNT"
+          # 3. 执行反编译（输出到 build/artifacts/mc_src）
+          echo "🔧 开始反编译 minecraft-merged.jar ..."
+          java -jar "$CFR_JAR" "$MERGED_JAR" --outputdir build/artifacts/mc_src
+
+          # 4. 验证反编译结果
+          JAVA_COUNT=$(find build/artifacts/mc_src -name "*.java" 2>/dev/null | wc -l)
+          if [ "$JAVA_COUNT" -gt 0 ]; then
+            echo "🎉 反编译成功！生成 $JAVA_COUNT 个 Java 文件"
             echo "found_java=true" >> $GITHUB_OUTPUT
           else
-            echo "❌ 所有方法均失败，跳过源码上传"
-            # 打印部分缓存目录结构以便调试
-            echo "📂 打印 ~/.gradle/caches 下部分目录（前 5 层）："
-            find ~/.gradle/caches -maxdepth 5 -type d 2>/dev/null | head -30
+            echo "⚠️ 反编译未产生任何 Java 文件"
             echo "found_java=false" >> $GITHUB_OUTPUT
           fi
 
@@ -108,9 +88,9 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      # ========== 上传源码（如果找到） ==========
-      - name: 上传 Minecraft 源码
-        if: steps.locate.outputs.found_java == 'true'
+      # ========== 上传反编译后的源码 ==========
+      - name: 上传 Minecraft 源码（反编译）
+        if: steps.decompile.outputs.found_java == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: minecraft-sources
