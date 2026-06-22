@@ -37,34 +37,63 @@ jobs:
         run: chmod +x ./gradlew
 
       # ============================================================
-      # 核心：强制 Loom 重新生成未混淆的源码
+      # 强制 Loom 生成未混淆源码（以 MinecraftClient.java 为锚点）
       # ============================================================
-      - name: 强制生成未混淆源码（Yarn 映射）
+      - name: 强制反编译并提取未混淆源码
         id: gen_unmapped
         run: |
-          # 1. 删除旧的 genSources 输出，强制 Gradle 重新执行
-          rm -rf build/tmp/genSources
-          
-          # 2. 运行 genSources，强制重跑所有相关任务
+          # 1. 清除所有可能的输出目录（确保重新生成）
+          rm -rf build/tmp/genSources build/genSources build/unpacked
+
+          # 2. 强制重跑反编译任务
           ./gradlew genSources --rerun-tasks --no-daemon
 
-          # 3. 检查是否生成未混淆源码
+          # 3. 搜索目标文件：net/minecraft/client/MinecraftClient.java
+          TARGET_FILE="net/minecraft/client/MinecraftClient.java"
           mkdir -p build/artifacts
-          if [ -d "build/tmp/genSources" ] && [ -d "build/tmp/genSources/net/minecraft" ]; then
-            # 检查是否有 .java 文件
-            JAVA_COUNT=$(find build/tmp/genSources -name "*.java" | wc -l)
-            if [ "$JAVA_COUNT" -gt 0 ]; then
-              echo "✅ 成功生成未混淆源码，Java 文件数: $JAVA_COUNT"
-              cp -r build/tmp/genSources build/artifacts/mc_src
-              echo "found_java=true" >> $GITHUB_OUTPUT
-            else
-              echo "⚠️ 目录存在，但未找到 .java 文件"
-              echo "found_java=false" >> $GITHUB_OUTPUT
+          FOUND=false
+
+          # 3a. 在 build/ 下搜索
+          echo "🔍 在 build/ 下搜索 $TARGET_FILE ..."
+          SRC_DIR=$(find build -type f -name "MinecraftClient.java" -path "*/net/minecraft/client/MinecraftClient.java" 2>/dev/null | head -1 | xargs -n1 dirname | head -1)
+          if [ -n "$SRC_DIR" ] && [ -f "$SRC_DIR/$TARGET_FILE" ]; then
+            echo "✅ 在 build 下找到: $SRC_DIR"
+            cp -r "$SRC_DIR" build/artifacts/mc_src
+            FOUND=true
+          fi
+
+          # 3b. 如果没找到，在 Gradle 缓存中搜索
+          if [ "$FOUND" = false ]; then
+            echo "🔍 在 ~/.gradle/caches/ 下搜索 $TARGET_FILE ..."
+            SRC_DIR=$(find ~/.gradle/caches -type f -name "MinecraftClient.java" -path "*/net/minecraft/client/MinecraftClient.java" 2>/dev/null | head -1 | xargs -n1 dirname | head -1)
+            if [ -n "$SRC_DIR" ] && [ -f "$SRC_DIR/$TARGET_FILE" ]; then
+              echo "✅ 在缓存中找到: $SRC_DIR"
+              cp -r "$SRC_DIR" build/artifacts/mc_src
+              FOUND=true
             fi
+          fi
+
+          # 3c. 如果还找不到，暴力搜索整个工作目录
+          if [ "$FOUND" = false ]; then
+            echo "🔍 全局搜索 $TARGET_FILE（可能耗时）..."
+            SRC_DIR=$(find . -type f -name "MinecraftClient.java" -path "*/net/minecraft/client/MinecraftClient.java" 2>/dev/null | head -1 | xargs -n1 dirname | head -1)
+            if [ -n "$SRC_DIR" ] && [ -f "$SRC_DIR/$TARGET_FILE" ]; then
+              echo "✅ 全局搜索找到: $SRC_DIR"
+              cp -r "$SRC_DIR" build/artifacts/mc_src
+              FOUND=true
+            fi
+          fi
+
+          # 4. 如果找到了，统计并标记
+          if [ "$FOUND" = true ]; then
+            JAVA_COUNT=$(find build/artifacts/mc_src -name "*.java" 2>/dev/null | wc -l)
+            echo "🎉 成功获取未混淆源码！Java 文件数: $JAVA_COUNT"
+            echo "found_java=true" >> $GITHUB_OUTPUT
           else
-            echo "❌ 未找到 build/tmp/genSources/net/minecraft，生成失败"
-            # 打印 build/ 目录结构用于调试
-            find build -maxdepth 3 -type d
+            echo "❌ 所有方法均失败，未找到 $TARGET_FILE"
+            # 打印一些可能的 Java 文件路径（前 20 个）用于调试
+            echo "📂 以下是一些包含 MinecraftClient 的文件（如果有）："
+            find . -name "MinecraftClient.java" 2>/dev/null | head -20 || echo "没有找到任何 MinecraftClient.java"
             echo "found_java=false" >> $GITHUB_OUTPUT
           fi
 
@@ -80,7 +109,7 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      # ========== 上传未混淆源码（如果成功） ==========
+      # ========== 上传未混淆源码（如果找到） ==========
       - name: 上传未混淆源码（Yarn 映射后）
         if: steps.gen_unmapped.outputs.found_java == 'true'
         uses: actions/upload-artifact@v4
