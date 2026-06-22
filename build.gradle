@@ -33,8 +33,6 @@ modrinth {
 
 loom {
     accessWidenerPath = file 'src/main/resources/ultimate_scaler.accessWidener'
-    // 强制将 genSources 输出到 build/genSources
-    genSourcesDir = file("build/genSources")
 }
 
 repositories {
