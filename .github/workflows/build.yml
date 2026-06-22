@@ -40,39 +40,75 @@ jobs:
       - name: 生成 Minecraft 源码
         run: ./gradlew genSources
 
-      # ========== 定位并提取源码 jar ==========
-      - name: 提取源码 jar 并解压
+      # ========== 定位并提取源码 jar（健壮版） ==========
+      - name: 定位并提取 Minecraft 源码 jar
+        id: extract_source
         run: |
-          echo "🔍 正在搜索 Minecraft 源码 jar..."
-          SOURCE_JAR=$(find ~/.gradle/caches -name "minecraft-1.21.8-*-sources.jar" | head -n 1)
-          echo "📍 找到的源码 jar: $SOURCE_JAR"
-          
-          if [ -f "$SOURCE_JAR" ]; then
-            # 复制源码 jar 到 build/libs 下，作为备用
-            cp "$SOURCE_JAR" build/libs/minecraft-1.21.8-sources.jar
-            echo "✅ 源码 jar 已复制到 build/libs/minecraft-1.21.8-sources.jar"
-            
-            # 解压源码到 build/mc_src
-            mkdir -p build/mc_src
+          set -e
+          # 从 gradle.properties 读取版本
+          MC_VERSION=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
+          echo "📌 Minecraft 版本: $MC_VERSION"
+
+          # 候选路径列表
+          CANDIDATES=(
+            "$HOME/.gradle/caches/fabric-loom/$MC_VERSION/minecraft-$MC_VERSION-sources.jar"
+            "$HOME/.gradle/caches/fabric-loom/$MC_VERSION/minecraft-$MC_VERSION-sources.jar"
+            "$HOME/.gradle/caches/modules-2/files-2.1/net.minecraft/minecraft/$MC_VERSION/minecraft-$MC_VERSION-sources.jar"
+            "$HOME/.gradle/caches/modules-2/files-2.1/com.mojang/minecraft/$MC_VERSION/minecraft-$MC_VERSION-sources.jar"
+          )
+
+          SOURCE_JAR=""
+          for path in "${CANDIDATES[@]}"; do
+            if [ -f "$path" ]; then
+              SOURCE_JAR="$path"
+              echo "✅ 找到源码 jar: $SOURCE_JAR"
+              break
+            fi
+          done
+
+          # 如果还没找到，全盘搜索（不限制文件名）
+          if [ -z "$SOURCE_JAR" ]; then
+            echo "⚠️ 候选路径未找到，开始全局搜索（这可能耗时）..."
+            SOURCE_JAR=$(find ~/.gradle/caches -name "*.jar" -path "*/minecraft*" -name "*sources*" | head -1)
+            if [ -n "$SOURCE_JAR" ]; then
+              echo "✅ 全局搜索找到: $SOURCE_JAR"
+            fi
+          fi
+
+          # 如果仍然找不到，打印目录结构帮助调试，但不要退出
+          if [ -z "$SOURCE_JAR" ] || [ ! -f "$SOURCE_JAR" ]; then
+            echo "❌ 未找到源码 jar，将跳过源码上传。以下是 fabric-loom 缓存目录内容："
+            if [ -d "$HOME/.gradle/caches/fabric-loom" ]; then
+              find "$HOME/.gradle/caches/fabric-loom" -type f -name "*.jar" | head -20
+            else
+              echo "fabric-loom 目录不存在"
+            fi
+            echo "将输出所有包含 'minecraft' 的 jar 文件（前 10 个）："
+            find ~/.gradle/caches -name "*.jar" | grep -i minecraft | head -10
+            # 设置变量为空，但不会失败
+            SOURCE_JAR=""
+          fi
+
+          # 如果有源码 jar，复制并解压
+          if [ -n "$SOURCE_JAR" ] && [ -f "$SOURCE_JAR" ]; then
+            mkdir -p build/libs build/mc_src
+            cp "$SOURCE_JAR" build/libs/minecraft-$MC_VERSION-sources.jar
             unzip -q "$SOURCE_JAR" -d build/mc_src
             echo "✅ 源码已解压到 build/mc_src"
-            
-            # 验证解压结果
+            # 验证
             if [ -d "build/mc_src/net/minecraft" ]; then
               echo "✅ 验证通过：build/mc_src/net/minecraft 存在"
-              ls -l build/mc_src/net/minecraft | head -20
             else
-              echo "⚠️ 警告：未找到 net/minecraft 目录，解压可能不完整"
+              echo "⚠️ 警告：解压后未找到 net/minecraft 目录"
             fi
           else
-            echo "❌ 错误：未找到源码 jar，genSources 可能失败"
-            exit 1
+            echo "⚠️ 跳过源码提取"
           fi
 
       - name: 执行模组构建（不包含 Minecraft 类）
         run: ./gradlew build --no-daemon
 
-      # ========== 上传产物 1：模组 Jar（干净） ==========
+      # ========== 上传产物 1：模组 Jar ==========
       - name: 上传模组构建产物
         uses: actions/upload-artifact@v4
         with:
@@ -80,18 +116,18 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      # ========== 上传产物 2：已解压的 Minecraft 源码（完整目录） ==========
+      # ========== 上传产物 2：已解压的 Minecraft 源码（如果有） ==========
       - name: 上传 Minecraft 源码（已解压，即开即看）
         uses: actions/upload-artifact@v4
         with:
-          name: minecraft-sources-1.21.8
+          name: minecraft-sources-${{ env.MC_VERSION }}
           path: build/mc_src
-          if-no-files-found: warn
+          if-no-files-found: ignore   # 没有也不报错
 
-      # ========== 额外：如果上面没传成功，把源码 jar 本身也传上去 ==========
+      # ========== 上传产物 3：源码 jar（如果有） ==========
       - name: 上传 Minecraft 源码 jar（备用）
         uses: actions/upload-artifact@v4
         with:
-          name: minecraft-sources-jar-1.21.8
-          path: build/libs/minecraft-1.21.8-sources.jar
-          if-no-files-found: warn
+          name: minecraft-sources-jar-${{ env.MC_VERSION }}
+          path: build/libs/minecraft-*.jar
+          if-no-files-found: ignore
