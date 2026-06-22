@@ -1,60 +1,70 @@
 package me.inf32768.ultimate_scaler.mixins.fixing;
 
-import net.minecraft.block.Blocks;
-import net.minecraft.world.gen.chunk.AquiferSampler;
-import net.minecraft.world.gen.chunk.ChunkNoiseSampler;
-import net.minecraft.world.gen.densityfunction.DensityFunction;
+import net.minecraft.util.math.ChunkSectionPos;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.gen.Accessor;
 
 import static me.inf32768.ultimate_scaler.option.UltimateScalerOptions.config;
 
-@Mixin(ChunkNoiseSampler.class)
-public abstract class MixinChunkNoiseSampler {
+/**
+ * 修复 ChunkSectionPos.asLong 打包溢出问题。
+ * 当坐标超出 ±33554432 时，将坐标钳制到安全范围内，
+ * 而不是让其截断溢出。
+ */
+@Mixin(ChunkSectionPos.class)
+public abstract class MixinChunkSectionPos {
 
-    @Shadow
-    private int firstBlockX;
+    @Accessor("field_33104")
+    private static native long getBITS_X();
 
-    @Shadow
-    private int firstBlockZ;
+    @Accessor("field_33105")
+    private static native long getBITS_Y();
+
+    @Accessor("field_33106")
+    private static native long getBITS_Z();
+
+    @Accessor("field_33109")
+    private static native int getBIT_SHIFT_X();
+
+    @Accessor("field_33108")
+    private static native int getBIT_SHIFT_Z();
 
     /**
-     * 拦截 getAquiferSampler 方法，在极远坐标下返回安全的 AquiferSampler 实现。
+     * 覆盖 asLong 方法，对坐标进行钳制以防止溢出。
+     *
+     * @reason 原版使用 26 位存储 X/Z，超出 ±33554432 时发生截断，
+     *         导致打包后的 long 值不再单调递增，进而使 LongAVLTreeSet.subSet 崩溃。
+     *         此修改将坐标钳制到安全范围内，保留含水层逻辑，同时防止崩溃。
+     * @author INF32768
      */
-    @Inject(method = "getAquiferSampler", at = @At("RETURN"), cancellable = true)
-    private void wrapAquiferSampler(CallbackInfoReturnable<AquiferSampler> cir) {
-        if (!config.fixChunkSectionSubSetOverflow) return;
-
-        AquiferSampler original = cir.getReturnValue();
-        if (original == null) return;
-
-        int chunkX = this.firstBlockX >> 4;
-        int chunkZ = this.firstBlockZ >> 4;
-
-        // 坐标在安全范围内，直接返回原始实例
-        if (Math.abs(chunkX) <= 2097152 && Math.abs(chunkZ) <= 2097152) {
-            return;
+    @Overwrite
+    public static long asLong(int x, int y, int z) {
+        if (!config.fixChunkSectionSubSetOverflow) {
+            // 回退到原版逻辑（使用 Accessor 获取私有常量）
+            long l = 0L;
+            l |= ((long) x & getBITS_X()) << getBIT_SHIFT_X();
+            l |= ((long) y & getBITS_Y()) << 0;
+            l |= ((long) z & getBITS_Z()) << getBIT_SHIFT_Z();
+            return l;
         }
 
-        // 极远坐标：返回安全的匿名实现
-        cir.setReturnValue(new AquiferSampler() {
-            @Override
-            public AquiferSampler.FluidLevel apply(DensityFunction.NoisePos pos, double density) {
-                // 二次检查，防止传递了极端坐标
-                if (Math.abs(pos.blockX()) > 33554432 || Math.abs(pos.blockZ()) > 33554432) {
-                    return new AquiferSampler.FluidLevel(Integer.MIN_VALUE, Blocks.AIR.getDefaultState());
-                }
-                return original.apply(pos, density);
-            }
+        // ✨ 钳制坐标到安全范围（26 位有符号数的最大值）
+        final int MAX_SAFE_COORD = 33554431;
+        final int MIN_SAFE_COORD = -33554432;
 
-            @Override
-            public boolean needsFluidTick() {
-                // 极远坐标下不进行流体刻，避免内部溢出
-                return false;
-            }
-        });
+        int clampedX = Math.max(MIN_SAFE_COORD, Math.min(MAX_SAFE_COORD, x));
+        int clampedZ = Math.max(MIN_SAFE_COORD, Math.min(MAX_SAFE_COORD, z));
+        // Y 轴只有 12 位，范围 -2048~2047，原版已经够用，但以防万一也做钳制
+        final int MAX_SAFE_Y = 2047;
+        final int MIN_SAFE_Y = -2048;
+        int clampedY = Math.max(MIN_SAFE_Y, Math.min(MAX_SAFE_Y, y));
+
+        // 使用钳制后的坐标进行打包
+        long l = 0L;
+        l |= ((long) clampedX & getBITS_X()) << getBIT_SHIFT_X();
+        l |= ((long) clampedY & getBITS_Y()) << 0;
+        l |= ((long) clampedZ & getBITS_Z()) << getBIT_SHIFT_Z();
+        return l;
     }
 }
