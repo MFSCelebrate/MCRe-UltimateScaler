@@ -32,7 +32,7 @@
     "offset.MixinWeirdScaledSampler",
     "offset.MixinYClampedGradient",
     "fixing.MixinSectionedEntityCache",
-    "fixing.MixinChunkNoiseSampler"
+    "fixing.MixinChunkSectionPos"
   ],
   "client": [
     "MixinDebugHud",
