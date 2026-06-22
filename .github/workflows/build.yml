@@ -36,43 +36,35 @@ jobs:
       - name: 给 gradlew 加执行权限
         run: chmod +x ./gradlew
 
-      # 即使 genSources 不产出源码，我们也要跑一遍以获取缓存
-      - name: 生成 Minecraft 源码（获取缓存）
-        run: ./gradlew genSources --no-daemon
-
-      # ========== 直接用 CFR 反编译 minecraft-merged.jar ==========
-      - name: 反编译 Minecraft 字节码（CFR）
-        id: decompile
+      # ============================================================
+      # 核心：强制 Loom 重新生成未混淆的源码
+      # ============================================================
+      - name: 强制生成未混淆源码（Yarn 映射）
+        id: gen_unmapped
         run: |
+          # 1. 删除旧的 genSources 输出，强制 Gradle 重新执行
+          rm -rf build/tmp/genSources
+          
+          # 2. 运行 genSources，强制重跑所有相关任务
+          ./gradlew genSources --rerun-tasks --no-daemon
+
+          # 3. 检查是否生成未混淆源码
           mkdir -p build/artifacts
-
-          # 1. 定位 minecraft-merged.jar（这是原版完整字节码）
-          MERGED_JAR=$(find ~/.gradle/caches -type f -name "minecraft-merged.jar" 2>/dev/null | head -1)
-          if [ -z "$MERGED_JAR" ] || [ ! -f "$MERGED_JAR" ]; then
-            echo "❌ 未找到 minecraft-merged.jar，跳过反编译"
-            echo "found_java=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          echo "✅ 找到 minecraft-merged.jar: $MERGED_JAR"
-
-          # 2. 下载 CFR 反编译器
-          CFR_JAR="build/cfr.jar"
-          if [ ! -f "$CFR_JAR" ]; then
-            echo "📥 正在下载 CFR 反编译器..."
-            wget -q -O "$CFR_JAR" "https://repo1.maven.org/maven2/org/benf/cfr/0.152/cfr-0.152.jar"
-          fi
-
-          # 3. 执行反编译（输出到 build/artifacts/mc_src）
-          echo "🔧 开始反编译 minecraft-merged.jar ..."
-          java -jar "$CFR_JAR" "$MERGED_JAR" --outputdir build/artifacts/mc_src
-
-          # 4. 验证反编译结果
-          JAVA_COUNT=$(find build/artifacts/mc_src -name "*.java" 2>/dev/null | wc -l)
-          if [ "$JAVA_COUNT" -gt 0 ]; then
-            echo "🎉 反编译成功！生成 $JAVA_COUNT 个 Java 文件"
-            echo "found_java=true" >> $GITHUB_OUTPUT
+          if [ -d "build/tmp/genSources" ] && [ -d "build/tmp/genSources/net/minecraft" ]; then
+            # 检查是否有 .java 文件
+            JAVA_COUNT=$(find build/tmp/genSources -name "*.java" | wc -l)
+            if [ "$JAVA_COUNT" -gt 0 ]; then
+              echo "✅ 成功生成未混淆源码，Java 文件数: $JAVA_COUNT"
+              cp -r build/tmp/genSources build/artifacts/mc_src
+              echo "found_java=true" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️ 目录存在，但未找到 .java 文件"
+              echo "found_java=false" >> $GITHUB_OUTPUT
+            fi
           else
-            echo "⚠️ 反编译未产生任何 Java 文件"
+            echo "❌ 未找到 build/tmp/genSources/net/minecraft，生成失败"
+            # 打印 build/ 目录结构用于调试
+            find build -maxdepth 3 -type d
             echo "found_java=false" >> $GITHUB_OUTPUT
           fi
 
@@ -88,11 +80,11 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      # ========== 上传反编译后的源码 ==========
-      - name: 上传 Minecraft 源码（反编译）
-        if: steps.decompile.outputs.found_java == 'true'
+      # ========== 上传未混淆源码（如果成功） ==========
+      - name: 上传未混淆源码（Yarn 映射后）
+        if: steps.gen_unmapped.outputs.found_java == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: minecraft-sources
+          name: minecraft-sources-unobfuscated
           path: build/artifacts/mc_src
           if-no-files-found: ignore
