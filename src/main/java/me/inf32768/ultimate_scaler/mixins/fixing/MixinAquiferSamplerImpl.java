@@ -5,12 +5,14 @@ import net.minecraft.world.gen.chunk.AquiferSampler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 import static me.inf32768.ultimate_scaler.option.UltimateScalerOptions.config;
 
 /**
  * 修复 AquiferSampler.Impl 内部所有数组索引溢出问题。
- * 同时覆盖 index 和 method_33738（getFluidBlockY）两个方法。
+ * 通过 @Redirect 拦截 BlockPos.asLong 调用 + @Overwrite 覆盖 index 方法。
  */
 @Mixin(targets = "net.minecraft.world.gen.chunk.AquiferSampler$Impl")
 public abstract class MixinAquiferSamplerImpl {
@@ -55,27 +57,27 @@ public abstract class MixinAquiferSamplerImpl {
     }
 
     /**
-     * 覆盖原版 method_33738（getFluidBlockY）。
-     * 该方法内部使用 BlockPos.asLong 取模计算数组索引，
-     * 我们在这里钳制坐标后重新计算。
+     * 拦截 getFluidBlockY 内部所有 BlockPos.asLong 调用。
+     * 钳制坐标后再调用原版方法，防止溢出导致的数组越界。
      */
-    @Overwrite
-    private int method_33738(int x, int y, int z) {
+    @Redirect(
+        method = "getFluidBlockY",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/util/math/BlockPos;asLong(III)J"
+        )
+    )
+    private long redirectBlockPosAsLong(int x, int y, int z) {
         if (!config.fixChunkSectionSubSetOverflow) {
-            // 回退到原版逻辑：直接使用 BlockPos.asLong 取模
-            long packed = BlockPos.asLong(x, y, z);
-            return (int) Math.floorMod(packed, 315);
+            return BlockPos.asLong(x, y, z);
         }
 
-        // 钳制坐标
         final int MAX_SAFE_COORD = 33554400;
         final int MIN_SAFE_COORD = -33554400;
         int clampedX = Math.max(MIN_SAFE_COORD, Math.min(MAX_SAFE_COORD, x));
         int clampedY = Math.max(-2048, Math.min(2047, y));
         int clampedZ = Math.max(MIN_SAFE_COORD, Math.min(MAX_SAFE_COORD, z));
 
-        // 使用钳制后的坐标重新打包并取模
-        long packed = BlockPos.asLong(clampedX, clampedY, clampedZ);
-        return (int) Math.floorMod(packed, 315);
+        return BlockPos.asLong(clampedX, clampedY, clampedZ);
     }
 }
