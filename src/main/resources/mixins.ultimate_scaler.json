@@ -30,7 +30,8 @@
     "offset.MixinShiftB",
     "offset.MixinShiftedNoiseSampler",
     "offset.MixinWeirdScaledSampler",
-    "offset.MixinYClampedGradient"
+    "offset.MixinYClampedGradient",
+    "fixing.MixinChunkSection"
   ],
   "client": [
     "MixinDebugHud",
