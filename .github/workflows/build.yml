@@ -39,63 +39,60 @@ jobs:
       - name: 生成 Minecraft 源码
         run: ./gradlew genSources --no-daemon
 
-      # ========== 暴力探查 build 目录，定位反编译输出 ==========
-      - name: 探测反编译输出目录
-        id: probe
+      # ========== 全局搜索缓存中的反编译源码 ==========
+      - name: 定位反编译源码（全局搜索缓存）
+        id: locate
         run: |
-          echo "📂 打印 build/ 目录结构（前 3 层）："
-          find build -maxdepth 3 -type d 2>/dev/null || echo "build 目录不存在或为空"
-
           mkdir -p build/artifacts
           FOUND=false
 
-          # 方法1：在 build 下直接查找包含 net/minecraft 的目录
-          SRC_DIR=$(find build -type d -path "*/net/minecraft" 2>/dev/null | head -1)
-          if [ -n "$SRC_DIR" ] && [ -d "$SRC_DIR" ]; then
-            PARENT_DIR=$(dirname "$SRC_DIR")
-            echo "✅ 通过搜索找到源码目录: $PARENT_DIR"
-            cp -r "$PARENT_DIR" build/artifacts/mc_src
-            FOUND=true
-          fi
+          # 在 gradle 缓存中查找包含 net/minecraft 且含有 .java 文件的目录
+          echo "🔍 正在搜索缓存中的反编译源码..."
+          # 查找所有包含 net/minecraft 的目录（跳过 .jar 文件）
+          CANDIDATE_DIRS=$(find ~/.gradle/caches -type d -path "*/net/minecraft" 2>/dev/null)
+          for dir in $CANDIDATE_DIRS; do
+            PARENT=$(dirname "$dir")
+            # 检查父目录下是否有 .java 文件（可能就在 net/minecraft 下一层）
+            JAVA_COUNT=$(find "$PARENT" -name "*.java" 2>/dev/null | wc -l)
+            if [ "$JAVA_COUNT" -gt 0 ]; then
+              echo "✅ 找到包含 Java 源码的目录: $PARENT"
+              cp -r "$PARENT" build/artifacts/mc_src
+              FOUND=true
+              break
+            fi
+          done
 
-          # 方法2：如果找不到，尝试经典的 Loom 输出路径
+          # 如果还没找到，尝试搜索整个缓存中所有 .java 文件，并提取它们的父目录
           if [ "$FOUND" = false ]; then
-            for dir in build/tmp/genSources build/genSources build/generated/sources build/.gen; do
-              if [ -d "$dir" ] && [ -d "$dir/net/minecraft" ]; then
-                echo "✅ 在预设目录找到源码: $dir"
-                cp -r "$dir" build/artifacts/mc_src
-                FOUND=true
-                break
-              fi
-            done
-          fi
-
-          # 方法3：尝试解压缓存中的 merged-unpicked.jar（前提是非空）
-          if [ "$FOUND" = false ]; then
-            echo "⚠️ 未找到反编译源码，尝试从缓存提取 merged-unpicked.jar"
-            SOURCE_JAR=$(find ~/.gradle/caches -type f -name "merged-unpicked.jar" 2>/dev/null | head -1)
-            if [ -n "$SOURCE_JAR" ] && [ -f "$SOURCE_JAR" ] && [ -s "$SOURCE_JAR" ]; then
-              mkdir -p build/artifacts/mc_src
-              if unzip -q "$SOURCE_JAR" -d build/artifacts/mc_src 2>/dev/null; then
-                echo "✅ 解压 merged-unpicked.jar 成功（可能包含 .class）"
+            echo "⚠️ 未找到目录，尝试搜索 .java 文件..."
+            JAVA_FILES=$(find ~/.gradle/caches -name "*.java" -path "*/net/minecraft/*" 2>/dev/null | head -20)
+            if [ -n "$JAVA_FILES" ]; then
+              # 取第一个 java 文件的路径，提取 net/minecraft 的父目录
+              FIRST_JAVA=$(echo "$JAVA_FILES" | head -1)
+              # 在路径中定位 net/minecraft 的位置
+              MC_DIR=$(echo "$FIRST_JAVA" | sed -n 's|\(.*/net/minecraft\).*|\1|p' | head -1)
+              if [ -n "$MC_DIR" ] && [ -d "$(dirname "$MC_DIR")" ]; then
+                PARENT=$(dirname "$MC_DIR")
+                echo "✅ 通过 .java 文件定位到目录: $PARENT"
+                cp -r "$PARENT" build/artifacts/mc_src
                 FOUND=true
               else
-                echo "⚠️ 解压失败，文件可能损坏"
-                rm -rf build/artifacts/mc_src
+                echo "❌ 无法从 .java 文件路径中提取有效目录"
               fi
-            else
-              echo "⚠️ merged-unpicked.jar 不存在或为空"
             fi
           fi
 
-          # 输出结果
+          # 如果找到了，统计并标记
           if [ "$FOUND" = true ]; then
             JAVA_COUNT=$(find build/artifacts/mc_src -name "*.java" 2>/dev/null | wc -l)
             CLASS_COUNT=$(find build/artifacts/mc_src -name "*.class" 2>/dev/null | wc -l)
-            echo "🎉 成功获取源码！Java 文件数: $JAVA_COUNT, Class 文件数: $CLASS_COUNT"
+            echo "🎉 成功获取源码！Java: $JAVA_COUNT, Class: $CLASS_COUNT"
             echo "found_java=true" >> $GITHUB_OUTPUT
           else
             echo "❌ 所有方法均失败，跳过源码上传"
+            # 打印部分缓存目录结构以便调试
+            echo "📂 打印 ~/.gradle/caches 下部分目录（前 5 层）："
+            find ~/.gradle/caches -maxdepth 5 -type d 2>/dev/null | head -30
             echo "found_java=false" >> $GITHUB_OUTPUT
           fi
 
@@ -111,9 +108,9 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      # ========== 上传源码（如果有） ==========
-      - name: 上传 Minecraft 源码（若有）
-        if: steps.probe.outputs.found_java == 'true'
+      # ========== 上传源码（如果找到） ==========
+      - name: 上传 Minecraft 源码
+        if: steps.locate.outputs.found_java == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: minecraft-sources
