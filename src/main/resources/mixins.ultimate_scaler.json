@@ -21,6 +21,8 @@
     "border.MixinWorldBorderProperties",
     "fixing.MixinAbstractChunkHolder",
     "fixing.MixinMineshaftPart",
+    "fixing.MixinChunkNoiseSampler",
+    "fixing.MixinAquiferSamplerImpl",
     "offset.MixinEndIslands",
     "offset.MixinInterpolatedNoiseSampler",
     "offset.MixinNoiseChunkGenerator",
@@ -30,9 +32,7 @@
     "offset.MixinShiftB",
     "offset.MixinShiftedNoiseSampler",
     "offset.MixinWeirdScaledSampler",
-    "offset.MixinYClampedGradient",
-    "fixing.MixinSectionedEntityCache",
-    "fixing.MixinChunkSectionPos"
+    "offset.MixinYClampedGradient"
   ],
   "client": [
     "MixinDebugHud",
