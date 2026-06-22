@@ -9,8 +9,8 @@ import static me.inf32768.ultimate_scaler.option.UltimateScalerOptions.config;
 
 /**
  * 修复 ChunkSectionPos.asLong 打包溢出问题。
- * 当坐标超出 ±33554432 时，将坐标钳制到安全范围内，
- * 而不是让其截断溢出。
+ * 当坐标超出 ±33554432 时，将坐标钳制到安全范围内（33554400），
+ * 而不是让其截断溢出，保留含水层逻辑的同时防止崩溃。
  */
 @Mixin(ChunkSectionPos.class)
 public abstract class MixinChunkSectionPos {
@@ -35,7 +35,7 @@ public abstract class MixinChunkSectionPos {
      *
      * @reason 原版使用 26 位存储 X/Z，超出 ±33554432 时发生截断，
      *         导致打包后的 long 值不再单调递增，进而使 LongAVLTreeSet.subSet 崩溃。
-     *         此修改将坐标钳制到安全范围内，保留含水层逻辑，同时防止崩溃。
+     *         此修改将坐标钳制到 ±33554400 的安全范围内，保留含水层逻辑，同时防止崩溃。
      * @author INF32768
      */
     @Overwrite
@@ -49,9 +49,10 @@ public abstract class MixinChunkSectionPos {
             return l;
         }
 
-        // ✨ 钳制坐标到安全范围（26 位有符号数的最大值）
-        final int MAX_SAFE_COORD = 33554431;
-        final int MIN_SAFE_COORD = -33554432;
+        // ✨ 钳制坐标到安全范围（26 位有符号数的最大值，但保留边界余量）
+        // 使用 33554400 而不是 33554431，防止跨越到边界外的区块
+        final int MAX_SAFE_COORD = 33554400;
+        final int MIN_SAFE_COORD = -33554400;
 
         int clampedX = Math.max(MIN_SAFE_COORD, Math.min(MAX_SAFE_COORD, x));
         int clampedZ = Math.max(MIN_SAFE_COORD, Math.min(MAX_SAFE_COORD, z));
