@@ -3,7 +3,6 @@ package me.inf32768.ultimate_scaler.mixins.fixing;
 import net.minecraft.util.math.ChunkSectionPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.gen.Accessor;
 
 import static me.inf32768.ultimate_scaler.option.UltimateScalerOptions.config;
 
@@ -16,20 +15,14 @@ import static me.inf32768.ultimate_scaler.option.UltimateScalerOptions.config;
 @Mixin(ChunkSectionPos.class)
 public abstract class MixinChunkSectionPos {
 
-    @Accessor("field_33104")
-    private static native long getBITS_X();
-
-    @Accessor("field_33105")
-    private static native long getBITS_Y();
-
-    @Accessor("field_33106")
-    private static native long getBITS_Z();
-
-    @Accessor("field_33109")
-    private static native int getBIT_SHIFT_X();
-
-    @Accessor("field_33108")
-    private static native int getBIT_SHIFT_Z();
+    // 原版位布局常量（1.21.8 固定）
+    private static final int SIZE_BITS_XZ = 26;
+    private static final int SIZE_BITS_Y = 64 - 2 * SIZE_BITS_XZ; // = 12
+    private static final long BITS_X = (1L << SIZE_BITS_XZ) - 1L;
+    private static final long BITS_Y = (1L << SIZE_BITS_Y) - 1L;
+    private static final long BITS_Z = (1L << SIZE_BITS_XZ) - 1L;
+    private static final int BIT_SHIFT_Z = SIZE_BITS_Y; // = 12
+    private static final int BIT_SHIFT_X = SIZE_BITS_Y + SIZE_BITS_XZ; // = 38
 
     /**
      * 覆盖 asLong 方法，对坐标进行钳制以防止溢出。
@@ -42,31 +35,28 @@ public abstract class MixinChunkSectionPos {
     @Overwrite
     public static long asLong(int x, int y, int z) {
         if (!config.fixChunkSectionSubSetOverflow) {
-            // 回退到原版逻辑（使用 Accessor 获取私有常量）
+            // 回退到原版逻辑（直接使用硬编码常量）
             long l = 0L;
-            l |= ((long) x & getBITS_X()) << getBIT_SHIFT_X();
-            l |= ((long) y & getBITS_Y()) << 0;
-            l |= ((long) z & getBITS_Z()) << getBIT_SHIFT_Z();
+            l |= ((long) x & BITS_X) << BIT_SHIFT_X;
+            l |= ((long) y & BITS_Y) << 0;
+            l |= ((long) z & BITS_Z) << BIT_SHIFT_Z;
             return l;
         }
 
-        // ✨ 钳制坐标到安全范围（26 位有符号数的最大值，但保留边界余量）
-        // 使用 33554400 而不是 33554431，防止跨越到边界外的区块
+        // 钳制坐标到安全范围（26 位有符号数的最大值，但保留边界余量）
         final int MAX_SAFE_COORD = 33554400;
         final int MIN_SAFE_COORD = -33554400;
-
         int clampedX = Math.max(MIN_SAFE_COORD, Math.min(MAX_SAFE_COORD, x));
         int clampedZ = Math.max(MIN_SAFE_COORD, Math.min(MAX_SAFE_COORD, z));
-        // Y 轴只有 12 位，范围 -2048~2047，原版已经够用，但以防万一也做钳制
-        final int MAX_SAFE_Y = 2047;
-        final int MIN_SAFE_Y = -2048;
+        // Y 轴钳制到 12 位范围 -2048~2047
+        final int MAX_SAFE_Y = (1 << (SIZE_BITS_Y - 1)) - 1; // 2047
+        final int MIN_SAFE_Y = -(1 << (SIZE_BITS_Y - 1));   // -2048
         int clampedY = Math.max(MIN_SAFE_Y, Math.min(MAX_SAFE_Y, y));
 
-        // 使用钳制后的坐标进行打包
         long l = 0L;
-        l |= ((long) clampedX & getBITS_X()) << getBIT_SHIFT_X();
-        l |= ((long) clampedY & getBITS_Y()) << 0;
-        l |= ((long) clampedZ & getBITS_Z()) << getBIT_SHIFT_Z();
+        l |= ((long) clampedX & BITS_X) << BIT_SHIFT_X;
+        l |= ((long) clampedY & BITS_Y) << 0;
+        l |= ((long) clampedZ & BITS_Z) << BIT_SHIFT_Z;
         return l;
     }
 }
