@@ -1,5 +1,5 @@
 # .github/workflows/build.yml
-# Ultimate Scaler CI 构建流水线（含 Minecraft 源码反编译，CFR 版）
+# Ultimate Scaler CI 构建流水线（稳定版，直接提供 bytecode）
 name: build
 
 on:
@@ -37,14 +37,13 @@ jobs:
       - name: 给 gradlew 加执行权限
         run: chmod +x ./gradlew
 
-      - name: 生成 Minecraft 源码（下载字节码包）
+      - name: 生成 Minecraft 源码（获取缓存 jar）
         run: ./gradlew genSources
 
       # ============================================================
-      # 用 CFR 反编译器提取 Java 源码
+      # 直接从缓存复制 Minecraft 核心 jar，不做反编译
       # ============================================================
-      - name: 反编译 Minecraft 源码（CFR）
-        id: decompile
+      - name: 收集 Minecraft 字节码包
         run: |
           set -e
           MC_VERSION=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
@@ -52,34 +51,27 @@ jobs:
 
           mkdir -p build/mc_src build/all_jars
 
-          # 1. 定位 merged-unpicked.jar
-          SOURCE_JAR=$(find ~/.gradle/caches -type f -name "merged-unpicked.jar" | head -1)
-          if [ -z "$SOURCE_JAR" ] || [ ! -f "$SOURCE_JAR" ]; then
-            echo "❌ 未找到 merged-unpicked.jar，跳过反编译"
-            exit 0
-          fi
-          echo "✅ 找到字节码包: $SOURCE_JAR"
-          cp "$SOURCE_JAR" build/all_jars/merged-unpicked.jar
-
-          # 2. 下载 CFR 反编译器
-          CFR_JAR="build/cfr.jar"
-          if [ ! -f "$CFR_JAR" ]; then
-            echo "📥 正在下载 CFR 反编译器..."
-            wget -q -O "$CFR_JAR" "https://repo1.maven.org/maven2/org/benf/cfr/0.152/cfr-0.152.jar"
-          fi
-
-          # 3. 执行反编译
-          echo "🔧 开始反编译 merged-unpicked.jar 到 build/mc_src ..."
-          java -jar "$CFR_JAR" "$SOURCE_JAR" --outputdir build/mc_src
-
-          # 4. 验证反编译结果
-          JAVA_COUNT=$(find build/mc_src -name "*.java" | wc -l)
-          echo "📊 反编译完成，Java 文件数: $JAVA_COUNT"
-          if [ "$JAVA_COUNT" -gt 0 ]; then
-            echo "🎉 成功！反编译出纯 Java 源码。"
+          # 1. 定位主游戏 jar（minecraft-merged.jar）
+          MERGED_JAR=$(find ~/.gradle/caches -type f -name "minecraft-merged.jar" | head -1)
+          if [ -n "$MERGED_JAR" ] && [ -f "$MERGED_JAR" ]; then
+            echo "✅ 找到主游戏包: $MERGED_JAR"
+            cp "$MERGED_JAR" build/all_jars/minecraft-merged.jar
+            # 解压到 mc_src（里面全是 .class，用于上传）
+            unzip -q "$MERGED_JAR" -d build/mc_src
+            echo "📊 解压完成，总文件数: $(find build/mc_src -type f | wc -l)"
           else
-            echo "⚠️ 未产生 Java 文件，可能反编译失败。"
+            echo "⚠️ 未找到 minecraft-merged.jar"
           fi
+
+          # 2. 额外备份 client jar（可选）
+          CLIENT_JAR=$(find ~/.gradle/caches -type f -name "minecraft-client.jar" | head -1)
+          if [ -n "$CLIENT_JAR" ] && [ -f "$CLIENT_JAR" ]; then
+            cp "$CLIENT_JAR" build/all_jars/minecraft-client.jar
+          fi
+
+          # 3. 列出 all_jars 内容
+          echo "📂 all_jars 目录内容："
+          ls -lh build/all_jars/
 
       # 执行模组构建
       - name: 执行模组构建
@@ -93,16 +85,16 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      # ========== 上传产物 2：反编译后的 Java 源码（如果成功） ==========
-      - name: 上传 Minecraft 源码（反编译后，纯 Java）
+      # ========== 上传产物 2：Minecraft 字节码（解压后，.class 文件） ==========
+      - name: 上传 Minecraft 字节码（解压后，可用 MT 管理器转 Java）
         uses: actions/upload-artifact@v4
         with:
-          name: minecraft-sources-${{ env.MC_VERSION }}
+          name: minecraft-bytecode-${{ env.MC_VERSION }}
           path: build/mc_src
           if-no-files-found: ignore
 
-      # ========== 上传产物 3：所有缓存 jar（备用） ==========
-      - name: 上传 Minecraft 缓存 JAR 包（备用）
+      # ========== 上传产物 3：原始 jar 备用 ==========
+      - name: 上传 Minecraft 缓存 JAR 包（原始）
         uses: actions/upload-artifact@v4
         with:
           name: minecraft-cache-all-jars
