@@ -1,5 +1,4 @@
 # .github/workflows/build.yml
-# Ultimate Scaler 标准构建流水线（纯净版，不含源码提取）
 name: build
 
 on:
@@ -37,12 +36,62 @@ jobs:
       - name: 给 gradlew 加执行权限
         run: chmod +x ./gradlew
 
-      - name: 执行模组构建
-        run: ./gradlew build
+      # ========== 生成源码（包含反编译） ==========
+      - name: 生成 Minecraft 源码
+        id: gen
+        run: ./gradlew genSources --no-daemon
 
-      - name: 上传构建产物
+      # ========== 定位 Loom 输出的反编译源码目录 ==========
+      - name: 收集 Loom 反编译源码
+        run: |
+          set -e
+          mkdir -p build/artifacts
+
+          # Loom 1.15+ 通常将源码放在 build/tmp/genSources/ 或 build/genSources
+          SOURCE_DIRS=("build/tmp/genSources" "build/genSources")
+          FOUND=false
+
+          for dir in "${SOURCE_DIRS[@]}"; do
+            if [ -d "$dir" ] && [ -d "$dir/net/minecraft" ]; then
+              echo "✅ 找到反编译源码目录: $dir"
+              cp -r "$dir" build/artifacts/mc_src
+              FOUND=true
+              break
+            fi
+          done
+
+          if [ "$FOUND" = true ]; then
+            echo "🎉 成功获取 Java 源码！"
+            # 统计文件数
+            echo "📊 Java 文件数: $(find build/artifacts/mc_src -name '*.java' | wc -l)"
+          else
+            echo "⚠️ 未找到 Loom 反编译目录，尝试从缓存提取 merged-unpicked.jar（字节码）..."
+            SOURCE_JAR=$(find ~/.gradle/caches -type f -name "merged-unpicked.jar" | head -1)
+            if [ -n "$SOURCE_JAR" ] && [ -f "$SOURCE_JAR" ]; then
+              mkdir -p build/artifacts/mc_src
+              unzip -q "$SOURCE_JAR" -d build/artifacts/mc_src
+              echo "📦 已解压 merged-unpicked.jar（含 .class 文件）"
+            else
+              echo "❌ 未找到任何可用源码包"
+            fi
+          fi
+
+      # ========== 执行模组构建 ==========
+      - name: 执行模组构建
+        run: ./gradlew build --no-daemon
+
+      # ========== 上传模组 Jar ==========
+      - name: 上传模组构建产物
         uses: actions/upload-artifact@v4
         with:
           name: UltimateScaler-${{ github.sha }}
           path: build/libs/*.jar
           if-no-files-found: error
+
+      # ========== 上传源码（优先 Java，若没有则字节码） ==========
+      - name: 上传 Minecraft 源码
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-sources
+          path: build/artifacts/mc_src
+          if-no-files-found: ignore
