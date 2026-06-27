@@ -71,7 +71,7 @@ public final class UltimateScalerOptions {
         public boolean publicTerrainPos = true;
         public boolean fixBlockPosOverflow = true;  // 默认启用
         public boolean fixGetChunkIllegal = true;  // 默认启用
-        public boolean fixChunkPosIntOverFlow = true;  // 默认启用
+      //  public boolean fixChunkPosIntOverFlow = true;  // 默认启用
     }
 
     static {
@@ -187,8 +187,8 @@ public final class UltimateScalerOptions {
         new String[]{"钳制 BlockPos.asLong 的 X/Z 坐标，防止溢出导致 subSet 崩溃"});
         ConfigManager.writeEntry(CONFIG_PATH, "fixGetChunkIllegal", config.fixGetChunkIllegal,
         new String[]{"修复 ChunkPosRegion 定位区块坐标时的 Int 溢出，使游戏能够 “正常” 获取区块坐标"});
-        ConfigManager.writeEntry(CONFIG_PATH, "fixChunkPosIntOverFlow", config.fixChunkPosIntOverFlow,
-        new String[]{"修复 ChunkPos 尝试突破 2147483647 导致的 Int 溢出"});
+      //  ConfigManager.writeEntry(CONFIG_PATH, "fixChunkPosIntOverFlow", config.fixChunkPosIntOverFlow,
+      //  new String[]{"修复 ChunkPos 尝试突破 2147483647 导致的 Int 溢出"});
     }
 
     /**
