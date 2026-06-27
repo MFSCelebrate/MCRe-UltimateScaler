@@ -37,46 +37,52 @@ jobs:
         run: chmod +x ./gradlew
 
       # ============================================================
-      # 步骤1：生成并提取反编译源码（独立运行，避免影响主构建）
+      # 核心：只获取 merged-unpicked.jar（不需要反编译）
       # ============================================================
-      - name: 生成 Minecraft 源码（反编译）
-        id: gen_sources
-        continue-on-error: true   # 即使失败也不阻断主构建
-        run: |
-          # 增加 Gradle 内存，限制并发，防止 OOM
-          echo "org.gradle.jvmargs=-Xmx4G" >> gradle.properties
-          ./gradlew genSources --no-daemon --max-workers=1
-
-      - name: 提取反编译源码产物
-        if: steps.gen_sources.outcome == 'success'
+      - name: 提取 merged-unpicked.jar（Yarn 映射字节码）
+        id: extract
         run: |
           mkdir -p build/artifacts
 
-          # 1. 反编译后的 Java 源码目录（build/tmp/genSources）
-          if [ -d "build/tmp/genSources" ]; then
-            cp -r build/tmp/genSources build/artifacts/mc_src
-            echo "✅ 已提取 Java 源码目录"
+          # 1. 触发 Loom 下载依赖（但不执行反编译）
+          # 用 'tasks' 或 'build' 都能让 Loom 在配置阶段下载中间产物
+          ./gradlew tasks --no-daemon
+
+          # 2. 从缓存中定位 merged-unpicked.jar（确保文件存在且非空）
+          UNPICKED_JAR=$(find ~/.gradle/caches -name "merged-unpicked.jar" -size +1M 2>/dev/null | head -1)
+          if [ -n "$UNPICKED_JAR" ] && [ -f "$UNPICKED_JAR" ]; then
+            cp "$UNPICKED_JAR" build/artifacts/merged-unpicked.jar
+            echo "✅ 已提取 merged-unpicked.jar (大小: $(du -h build/artifacts/merged-unpicked.jar | cut -f1))"
+            echo "found=true" >> $GITHUB_OUTPUT
           else
-            echo "⚠️ 未找到 build/tmp/genSources"
+            echo "⚠️ 未找到有效的 merged-unpicked.jar，尝试直接运行 gradle build 来生成缓存..."
+            # 如果第一次找不到，跑一次 build 确保缓存生成
+            ./gradlew build --no-daemon
+            UNPICKED_JAR=$(find ~/.gradle/caches -name "merged-unpicked.jar" -size +1M 2>/dev/null | head -1)
+            if [ -n "$UNPICKED_JAR" ] && [ -f "$UNPICKED_JAR" ]; then
+              cp "$UNPICKED_JAR" build/artifacts/merged-unpicked.jar
+              echo "✅ 第二次尝试成功，已提取 merged-unpicked.jar"
+              echo "found=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ 无法找到 merged-unpicked.jar"
+              echo "found=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
-          # 2. 从缓存中复制 merged-unpicked.jar（Yarn 映射后的字节码）
-          UNPICKED_JAR=$(find ~/.gradle/caches -name "merged-unpicked.jar" 2>/dev/null | head -1)
-          if [ -f "$UNPICKED_JAR" ]; then
-            cp "$UNPICKED_JAR" build/artifacts/merged-unpicked.jar
-            echo "✅ 已复制 merged-unpicked.jar"
-          else
-            echo "⚠️ 未找到 merged-unpicked.jar"
+          # 3. 打印缓存目录结构以便调试（如果失败）
+          if [ "$found" != "true" ]; then
+            echo "📂 缓存目录内容（前 20 个 jar）："
+            find ~/.gradle/caches -name "*.jar" 2>/dev/null | head -20
           fi
 
       # ============================================================
-      # 步骤2：执行模组构建（原构建流程）
+      # 执行模组构建（原构建流程）
       # ============================================================
       - name: 执行模组构建
         run: ./gradlew build --no-daemon
 
       # ============================================================
-      # 步骤3：上传所有产物
+      # 上传产物
       # ============================================================
       - name: 上传模组构建产物
         uses: actions/upload-artifact@v4
@@ -85,16 +91,8 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      - name: 上传反编译源码（Java 源码目录）
-        if: steps.gen_sources.outcome == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: minecraft-sources-java
-          path: build/artifacts/mc_src
-          if-no-files-found: ignore
-
-      - name: 上传 Yarn 映射字节码（merged-unpicked.jar）
-        if: steps.gen_sources.outcome == 'success'
+      - name: 上传 merged-unpicked.jar（Yarn 映射字节码）
+        if: steps.extract.outputs.found == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: minecraft-merged-unpicked
