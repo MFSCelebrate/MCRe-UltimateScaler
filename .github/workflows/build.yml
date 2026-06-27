@@ -36,12 +36,67 @@ jobs:
       - name: 给 gradlew 加执行权限
         run: chmod +x ./gradlew
 
+      # ============================================================
+      # 步骤1：生成并提取反编译源码（独立运行，避免影响主构建）
+      # ============================================================
+      - name: 生成 Minecraft 源码（反编译）
+        id: gen_sources
+        continue-on-error: true   # 即使失败也不阻断主构建
+        run: |
+          # 增加 Gradle 内存，限制并发，防止 OOM
+          echo "org.gradle.jvmargs=-Xmx4G" >> gradle.properties
+          ./gradlew genSources --no-daemon --max-workers=1
+
+      - name: 提取反编译源码产物
+        if: steps.gen_sources.outcome == 'success'
+        run: |
+          mkdir -p build/artifacts
+
+          # 1. 反编译后的 Java 源码目录（build/tmp/genSources）
+          if [ -d "build/tmp/genSources" ]; then
+            cp -r build/tmp/genSources build/artifacts/mc_src
+            echo "✅ 已提取 Java 源码目录"
+          else
+            echo "⚠️ 未找到 build/tmp/genSources"
+          fi
+
+          # 2. 从缓存中复制 merged-unpicked.jar（Yarn 映射后的字节码）
+          UNPICKED_JAR=$(find ~/.gradle/caches -name "merged-unpicked.jar" 2>/dev/null | head -1)
+          if [ -f "$UNPICKED_JAR" ]; then
+            cp "$UNPICKED_JAR" build/artifacts/merged-unpicked.jar
+            echo "✅ 已复制 merged-unpicked.jar"
+          else
+            echo "⚠️ 未找到 merged-unpicked.jar"
+          fi
+
+      # ============================================================
+      # 步骤2：执行模组构建（原构建流程）
+      # ============================================================
       - name: 执行模组构建
         run: ./gradlew build --no-daemon
 
-      - name: 上传构建产物
+      # ============================================================
+      # 步骤3：上传所有产物
+      # ============================================================
+      - name: 上传模组构建产物
         uses: actions/upload-artifact@v4
         with:
           name: UltimateScaler-${{ github.sha }}
           path: build/libs/*.jar
           if-no-files-found: error
+
+      - name: 上传反编译源码（Java 源码目录）
+        if: steps.gen_sources.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-sources-java
+          path: build/artifacts/mc_src
+          if-no-files-found: ignore
+
+      - name: 上传 Yarn 映射字节码（merged-unpicked.jar）
+        if: steps.gen_sources.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-merged-unpicked
+          path: build/artifacts/merged-unpicked.jar
+          if-no-files-found: ignore
