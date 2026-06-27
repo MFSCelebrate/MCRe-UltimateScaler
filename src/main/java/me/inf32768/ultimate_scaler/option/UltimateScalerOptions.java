@@ -70,6 +70,8 @@ public final class UltimateScalerOptions {
         public String replaceUndergroundLavaBlock = "minecraft:air";
         public boolean publicTerrainPos = true;
         public boolean fixBlockPosOverflow = true;  // 默认启用
+        public boolean fixGetChunkIllegal = true;  // 默认启用
+        public boolean fixChunkPosIntOverFlow = true;  // 默认启用
     }
 
     static {
@@ -180,9 +182,13 @@ public final class UltimateScalerOptions {
         ConfigManager.writeEntry(CONFIG_PATH, "fixMineshaftCannotGenerate", config.fixMineshaftCannotGenerate, new String[] {Text.translatable("ultimate_scaler.options.tweaks.fixMineshaftCannotGenerate").getString(), Text.translatable("ultimate_scaler.options.tweaks.fixMineshaftCannotGenerate.tooltip").getString()});
         ConfigManager.writeEntry(CONFIG_PATH, "publicTerrainPos", config.publicTerrainPos, new String[] {Text.translatable("ultimate_scaler.options.server.publicTerrainPos").getString()});
         ConfigManager.writeEntry(CONFIG_PATH, "fixChunkSectionSubSetOverflow", config.fixChunkSectionSubSetOverflow,
-        new String[]{"修复 ChunkSection 中 subSet 参数顺序，防止坐标溢出导致崩溃"});
+        new String[]{"修复 ChunkSection 和 SectionEntityCache 中 subSet 参数顺序，防止坐标溢出导致崩溃"});
         ConfigManager.writeEntry(CONFIG_PATH, "fixBlockPosOverflow", config.fixBlockPosOverflow,
         new String[]{"钳制 BlockPos.asLong 的 X/Z 坐标，防止溢出导致 subSet 崩溃"});
+        ConfigManager.writeEntry(CONFIG_PATH, "fixGetChunkIllegal", config.fixGetChunkIllegal,
+        new String[]{"修复 ChunkPosRegion 定位区块坐标时的 Int 溢出，使游戏能够 “正常” 获取区块坐标"});
+        ConfigManager.writeEntry(CONFIG_PATH, "fixChunkPosIntOverFlow", config.fixChunkPosIntOverFlow,
+        new String[]{"修复 ChunkPos 尝试突破 2147483647 导致的 Int 溢出"});
     }
 
     /**
