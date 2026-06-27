@@ -69,6 +69,7 @@ public final class UltimateScalerOptions {
         public boolean replaceUndergroundLava = false;
         public String replaceUndergroundLavaBlock = "minecraft:air";
         public boolean publicTerrainPos = true;
+        public boolean fixBlockPosOverflow = true;  // 默认启用
     }
 
     static {
@@ -180,6 +181,8 @@ public final class UltimateScalerOptions {
         ConfigManager.writeEntry(CONFIG_PATH, "publicTerrainPos", config.publicTerrainPos, new String[] {Text.translatable("ultimate_scaler.options.server.publicTerrainPos").getString()});
         ConfigManager.writeEntry(CONFIG_PATH, "fixChunkSectionSubSetOverflow", config.fixChunkSectionSubSetOverflow,
         new String[]{"修复 ChunkSection 中 subSet 参数顺序，防止坐标溢出导致崩溃"});
+        ConfigManager.writeEntry(CONFIG_PATH, "fixBlockPosOverflow", config.fixBlockPosOverflow,
+        new String[]{"钳制 BlockPos.asLong 的 X/Z 坐标，防止溢出导致 subSet 崩溃"});
     }
 
     /**
