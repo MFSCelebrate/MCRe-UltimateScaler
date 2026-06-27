@@ -32,6 +32,8 @@
     "offset.MixinShiftedNoiseSampler",
     "offset.MixinWeirdScaledSampler",
     "fixing.MixinSectionedEntityCache",
+    "fixing.MixinChunkRegion",
+    "fixing.MixinChunkPos",
     "offset.MixinYClampedGradient"
   ],
   "client": [
