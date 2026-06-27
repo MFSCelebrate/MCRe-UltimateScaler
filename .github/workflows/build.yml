@@ -37,52 +37,41 @@ jobs:
         run: chmod +x ./gradlew
 
       # ============================================================
-      # 核心：只获取 merged-unpicked.jar（不需要反编译）
+      # 触发 Loom 下载所有缓存
       # ============================================================
-      - name: 提取 merged-unpicked.jar（Yarn 映射字节码）
-        id: extract
-        run: |
-          mkdir -p build/artifacts
-
-          # 1. 触发 Loom 下载依赖（但不执行反编译）
-          # 用 'tasks' 或 'build' 都能让 Loom 在配置阶段下载中间产物
-          ./gradlew tasks --no-daemon
-
-          # 2. 从缓存中定位 merged-unpicked.jar（确保文件存在且非空）
-          UNPICKED_JAR=$(find ~/.gradle/caches -name "merged-unpicked.jar" -size +1M 2>/dev/null | head -1)
-          if [ -n "$UNPICKED_JAR" ] && [ -f "$UNPICKED_JAR" ]; then
-            cp "$UNPICKED_JAR" build/artifacts/merged-unpicked.jar
-            echo "✅ 已提取 merged-unpicked.jar (大小: $(du -h build/artifacts/merged-unpicked.jar | cut -f1))"
-            echo "found=true" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ 未找到有效的 merged-unpicked.jar，尝试直接运行 gradle build 来生成缓存..."
-            # 如果第一次找不到，跑一次 build 确保缓存生成
-            ./gradlew build --no-daemon
-            UNPICKED_JAR=$(find ~/.gradle/caches -name "merged-unpicked.jar" -size +1M 2>/dev/null | head -1)
-            if [ -n "$UNPICKED_JAR" ] && [ -f "$UNPICKED_JAR" ]; then
-              cp "$UNPICKED_JAR" build/artifacts/merged-unpicked.jar
-              echo "✅ 第二次尝试成功，已提取 merged-unpicked.jar"
-              echo "found=true" >> $GITHUB_OUTPUT
-            else
-              echo "❌ 无法找到 merged-unpicked.jar"
-              echo "found=false" >> $GITHUB_OUTPUT
-            fi
-          fi
-
-          # 3. 打印缓存目录结构以便调试（如果失败）
-          if [ "$found" != "true" ]; then
-            echo "📂 缓存目录内容（前 20 个 jar）："
-            find ~/.gradle/caches -name "*.jar" 2>/dev/null | head -20
-          fi
-
-      # ============================================================
-      # 执行模组构建（原构建流程）
-      # ============================================================
-      - name: 执行模组构建
+      - name: 执行 Gradle 构建（下载所有依赖和缓存）
         run: ./gradlew build --no-daemon
 
       # ============================================================
-      # 上传产物
+      # 激进：打包 /home/runner 下所有 jar（含 merged-unpicked.jar）
+      # ============================================================
+      - name: 收集并打包所有 jar
+        id: collect_jars
+        run: |
+          mkdir -p build/all_jars
+
+          # 激进！整个 /home/runner 下所有 jar 都复制过来
+          # 排除 Gradle wrapper 目录（避免重复）
+          find /home/runner -name "*.jar" -not -path "*/wrapper/*" -exec cp {} build/all_jars/ \;
+
+          echo "📊 共收集 $(ls -1 build/all_jars/ | wc -l) 个 jar 文件"
+          echo "📂 前 20 个文件："
+          ls -lh build/all_jars/ | head -20
+
+          # 检查 merged-unpicked.jar 是否在其中
+          if ls build/all_jars/ | grep -q "merged-unpicked"; then
+            echo "🎉 merged-unpicked.jar 已收集！"
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ 未找到 merged-unpicked.jar"
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+          # 生成文件列表，方便查看
+          ls -la build/all_jars/ > build/all_jars/filelist.txt
+
+      # ============================================================
+      # 上传模组 Jar
       # ============================================================
       - name: 上传模组构建产物
         uses: actions/upload-artifact@v4
@@ -91,10 +80,22 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      - name: 上传 merged-unpicked.jar（Yarn 映射字节码）
-        if: steps.extract.outputs.found == 'true'
+      # ============================================================
+      # 上传所有 jar（大礼包，含 merged-unpicked.jar）
+      # ============================================================
+      - name: 上传所有 jar（大礼包）
         uses: actions/upload-artifact@v4
         with:
-          name: minecraft-merged-unpicked
-          path: build/artifacts/merged-unpicked.jar
+          name: all-jars-collection
+          path: build/all_jars/*.jar
+          if-no-files-found: ignore
+
+      # ============================================================
+      # 额外上传文件列表，方便查看
+      # ============================================================
+      - name: 上传文件列表
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-filelist
+          path: build/all_jars/filelist.txt
           if-no-files-found: ignore
