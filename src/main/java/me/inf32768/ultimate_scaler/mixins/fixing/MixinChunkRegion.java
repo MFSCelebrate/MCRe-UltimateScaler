@@ -21,36 +21,24 @@ public abstract class MixinChunkRegion {
     @Shadow
     private ServerWorld world;
 
+    /**
+     * 拦截 getChunk(int, int) 调用，防止因坐标溢出导致的 IllegalStateException。
+     */
     @Inject(method = "getChunk(II)Lnet/minecraft/world/chunk/Chunk;", at = @At("HEAD"), cancellable = true)
-    private void redirectGetChunkInt(int chunkX, int chunkZ, CallbackInfoReturnable<Chunk> cir) {
+    private void redirectGetChunk(int chunkX, int chunkZ, CallbackInfoReturnable<Chunk> cir) {
         if (!config.fixGetChunkIllegal) return;
 
         ChunkPos pos = new ChunkPos(chunkX, chunkZ);
+
+        // 如果坐标超出合理范围（32位整数极限附近），返回空区块
         if (pos.x < -2147483600 || pos.x > 2147483600 || pos.z < -2147483600 || pos.z > 2147483600) {
             RegistryEntry<Biome> biome = world.getBiome(pos.getStartPos());
             cir.setReturnValue(new EmptyChunk(world, pos, biome));
             return;
         }
 
+        // 尝试获取区块，如果为 null 则返回空区块
         Chunk chunk = world.getChunk(chunkX, chunkZ);
-        if (chunk == null) {
-            RegistryEntry<Biome> biome = world.getBiome(pos.getStartPos());
-            chunk = new EmptyChunk(world, pos, biome);
-        }
-        cir.setReturnValue(chunk);
-    }
-
-    @Inject(method = "getChunk(Lnet/minecraft/util/math/ChunkPos;)Lnet/minecraft/world/chunk/Chunk;", at = @At("HEAD"), cancellable = true)
-    private void redirectGetChunkPos(ChunkPos pos, CallbackInfoReturnable<Chunk> cir) {
-        if (!config.fixGetChunkIllegal) return;
-
-        if (pos.x < -2147483600 || pos.x > 2147483600 || pos.z < -2147483600 || pos.z > 2147483600) {
-            RegistryEntry<Biome> biome = world.getBiome(pos.getStartPos());
-            cir.setReturnValue(new EmptyChunk(world, pos, biome));
-            return;
-        }
-
-        Chunk chunk = world.getChunk(pos.x, pos.z);
         if (chunk == null) {
             RegistryEntry<Biome> biome = world.getBiome(pos.getStartPos());
             chunk = new EmptyChunk(world, pos, biome);
