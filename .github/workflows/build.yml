@@ -37,24 +37,56 @@ jobs:
         run: chmod +x ./gradlew
 
       # ============================================================
-      # 触发 Loom 下载所有缓存（不反编译）
+      # 第一步：执行 build（生成常规缓存）
       # ============================================================
-      - name: 执行 Gradle 构建（下载依赖和缓存）
-        run: ./gradlew build
+      - name: 执行模组构建（build）
+        run: ./gradlew build --no-daemon
 
       # ============================================================
-      # 生成所有 jar 的完整路径列表（不复制文件）
+      # 第二步：执行 genSources（生成反编译相关缓存，即使失败也继续）
       # ============================================================
-      - name: 生成 jar 路径列表
+      - name: 执行 genSources（获取反编译版本）
+        id: gen_sources
+        continue-on-error: true
+        run: |
+          # 增加 Gradle 内存，限制并发
+          echo "org.gradle.jvmargs=-Xmx4G" >> gradle.properties
+          ./gradlew genSources --no-daemon --max-workers=1
+
+      # ============================================================
+      # 第三步：打包整个 fabric-loom 缓存目录
+      # ============================================================
+      - name: 打包 fabric-loom 缓存目录
         run: |
           mkdir -p build/artifacts
-          find /home/runner -name "*.jar" -not -path "*/wrapper/*" > build/artifacts/jar-paths.txt
-          echo "📊 共找到 $(wc -l < build/artifacts/jar-paths.txt) 个 jar 文件"
-          echo "📂 包含 merged-unpicked 的行："
-          grep -i "merged-unpicked" build/artifacts/jar-paths.txt || echo "未找到 merged-unpicked"
+
+          # 打包整个 fabric-loom 目录（含所有 jar、mappings、临时文件）
+          tar -czf build/artifacts/fabric-loom-cache-full.tar.gz \
+            -C ~/.gradle/caches fabric-loom/
+
+          echo "📊 缓存包大小: $(du -h build/artifacts/fabric-loom-cache-full.tar.gz | cut -f1)"
 
       # ============================================================
-      # 上传模组 Jar（原构建产物）
+      # 第四步：单独提取 merged-unpicked.jar（可能有多个版本）
+      # ============================================================
+      - name: 提取所有 merged-unpicked.jar
+        run: |
+          mkdir -p build/artifacts/jars
+
+          # 查找所有 merged-unpicked.jar 并复制到 jars 目录（带路径标识）
+          find ~/.gradle/caches/fabric-loom -name "merged-unpicked.jar" -type f 2>/dev/null | while read -r jar; do
+            # 生成安全的文件名（用目录结构标识）
+            SAFE_NAME=$(echo "$jar" | sed 's|/home/runner/.gradle/caches/fabric-loom/||' | tr '/' '_')
+            cp "$jar" "build/artifacts/jars/${SAFE_NAME}"
+            echo "📦 已复制: $jar -> ${SAFE_NAME} (大小: $(du -h "$jar" | cut -f1))"
+          done
+
+          # 列出所有收集到的 jar
+          echo "📂 收集到的 merged-unpicked.jar："
+          ls -lh build/artifacts/jars/
+
+      # ============================================================
+      # 第五步：上传所有产物
       # ============================================================
       - name: 上传模组构建产物
         uses: actions/upload-artifact@v4
@@ -63,12 +95,16 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
 
-      # ============================================================
-      # 上传路径列表（轻量级 artifact）
-      # ============================================================
-      - name: 上传 jar 路径列表
+      - name: 上传 fabric-loom 全量缓存包
         uses: actions/upload-artifact@v4
         with:
-          name: jar-paths-list
-          path: build/artifacts/jar-paths.txt
+          name: fabric-loom-cache-full
+          path: build/artifacts/fabric-loom-cache-full.tar.gz
+          if-no-files-found: error
+
+      - name: 上传所有 merged-unpicked.jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: merged-unpicked-jars-collection
+          path: build/artifacts/jars/*.jar
           if-no-files-found: ignore
