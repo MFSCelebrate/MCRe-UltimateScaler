@@ -32,10 +32,10 @@ public abstract class MixinChunkRegion {
      */
     @Inject(method = "getChunk(II)Lnet/minecraft/world/chunk/Chunk;", at = @At("HEAD"), cancellable = true)
     private void redirectGetChunkInt(int chunkX, int chunkZ, CallbackInfoReturnable<Chunk> cir) {
-        if (!config.fixChunkSectionSubSetOverflow) return;
+        if (!config.fixGetChunkIllegal) return;
 
         // 如果坐标溢出 int 范围或接近极限（小于 -2e9 或大于 2e9），直接返回空区块
-        if (chunkX < -2000000000 || chunkX > 2000000000 || chunkZ < -2000000000 || chunkZ > 2000000000) {
+        if (chunkX < -2147483600 || chunkX > 2147483600 || chunkZ < -2147483600 || chunkZ > 2147483600) {
             cir.setReturnValue(new EmptyChunk(world, new ChunkPos(chunkX, chunkZ)));
             return;
         }
@@ -56,9 +56,9 @@ public abstract class MixinChunkRegion {
      */
     @Inject(method = "getChunk(Lnet/minecraft/util/math/ChunkPos;)Lnet/minecraft/world/chunk/Chunk;", at = @At("HEAD"), cancellable = true)
     private void redirectGetChunkPos(ChunkPos pos, CallbackInfoReturnable<Chunk> cir) {
-        if (!config.fixChunkSectionSubSetOverflow) return;
+        if (!config.fixGetChunkIllegal) return;
 
-        if (pos.x < -2000000000 || pos.x > 2000000000 || pos.z < -2000000000 || pos.z > 2000000000) {
+        if (pos.x < -2147483600 || pos.x > 2147483600 || pos.z < -2147483600 || pos.z > 2147483600) {
             cir.setReturnValue(new EmptyChunk(world, pos));
             return;
         }
