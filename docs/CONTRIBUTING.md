@@ -15,7 +15,7 @@ First of all, thank you very much for using **Ultimate Scaler** and for your int
 We firmly believe that everyone who contributes to the project deserves to be remembered. As such, we maintain a **[list of contributors](./CONTRIBUTORS.md)**.
 
 **You can get on this list in any of the following ways:**
-- Submit a valid **issue** (for bug reports, it is valid if it is not marked as `invalid` or `duplicate` after review; For suggestions, they do so only if they are marked as `enhancement` after review).
+- Submit a valid **issue** (for bug reports, it is valid if it is not marked as `invalid`, `duplicate` or `work as intended` after review; For suggestions, they do so only if they are marked as `enhancement` after review).
 - Submitted **Pull Requests** are merged.
 - Provided **critical help or advice** through social media such as GitHub Discussions (as determined by the maintainer).
 - Provides **important non-code contributions** such as documentation, translation, design, etc.

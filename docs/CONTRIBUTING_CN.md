@@ -15,7 +15,7 @@
 我们坚信，每一位为项目付出努力的人都值得被铭记。因此，我们维护着一份 **[贡献者名单](CONTRIBUTORS_CN.md)**。
 
 **你可以通过以下任何一种方式登上这份名单：**
-- 提交有效的 **Issue**（对于问题 Issue，审查后不被标记为 `invalid` 或 `duplicate` 即为有效；对于建议 Issue，审查后标记为 `enhancement` 才算有效）。
+- 提交有效的 **Issue**（对于问题 Issue，审查后不被标记为 `invalid`、`duplicate` 或 `work as intended` 即为有效；对于建议 Issue，审查后标记为 `enhancement` 才算有效）。
 - 提交的 **Pull Request** 被合并。
 - 通过 GitHub Discussions、B站私信或视频评论等社交媒体提供了**关键性的帮助或建议**（由维护者认定）。
 - 提供了重要的**非代码贡献**，如文档、翻译、设计等。
