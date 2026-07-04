@@ -1,0 +1,15 @@
+{
+	"required": true,
+	"package": "xyz.inf32768.ultimatescaler.client.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"MixinDebugHud",
+		"MixinTitleScreen"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
