@@ -10,6 +10,7 @@ import xyz.inf32768.ultimatescaler.ModMetadata;
 public class ModMenuIntegration implements ModMenuApi {
     /**
      * 定义配置界面入口。
+     *
      * @return 配置界面工厂，供 Mod Menu 使用。
      */
     @Override

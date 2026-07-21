@@ -16,8 +16,6 @@ import java.lang.invoke.MethodType;
  * 故设置此兼容层，基于反射和方法名和环境版本动态匹配此方法。
  */
 public class RegistryAccessor {
-    private RegistryAccessor() {}
-
     // 反射查找需要用到的类常量
     private static final Class<?> REGISTRY_CLASS = Registry.class;
     private static final Class<?> RESOURCE_LOCATION_CLASS = ResourceLocation.class;
@@ -28,7 +26,6 @@ public class RegistryAccessor {
     private static final String NEW_INTERMEDIARY_METHOD_NAME = "method_63535";
     // 方法名变更出现的版本
     private static final Version VERSION_THRESHOLD = VersionUtil.parse("1.21.2");
-
     // 匹配到的方法
     private static final MethodHandle GET_METHOD;
 
@@ -53,14 +50,18 @@ public class RegistryAccessor {
         }
     }
 
+    private RegistryAccessor() {
+    }
+
     /**
      * 跨版本兼容的 {@link Registry#getValue(ResourceLocation)} 方法
      * <p>
      * 示例：{@code RegistryAccessor.get(BuiltInRegistries.BLOCK, ResourceLocation.parse("minecraft:stone"))}
      * <p>
      * 等价于 {@code BuiltInRegistries.BLOCK.getValue(ResourceLocation.parse("minecraft:stone")))}
+     *
      * @param registry 注册表实例
-     * @param id 资源标识符
+     * @param id       资源标识符
      * @return 注册表中的条目
      */
     @SuppressWarnings("unchecked")

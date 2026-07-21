@@ -21,6 +21,7 @@ public final class MixinConfigPlugin implements IMixinConfigPlugin {
 
     /**
      * 获取 Mixin RefMap 配置。高版本的 Fabric Loom 默认使用 TinyRemapper，不需要用到 RefMap，因此返回 {@code null} 来禁用 RefMap 配置。
+     *
      * @return {@code null}
      */
     @Override
@@ -37,8 +38,9 @@ public final class MixinConfigPlugin implements IMixinConfigPlugin {
      *     <li>{@link xyz.inf32768.ultimatescaler.mixin.border.MixinEntityBefore1_21_6}：仅在 1.21.5 及以下版本启用</li>
      *     <li>{@link xyz.inf32768.ultimatescaler.mixin.border.MixinEntityAfter1_21_6}：仅在 1.21.6 及以上版本启用</li>
      * </ul>
+     *
      * @param targetClassName 目标类的全限定名
-     * @param mixinClassName 目标类的 Mixin 类的全限定名
+     * @param mixinClassName  目标类的 Mixin 类的全限定名
      * @return {@code true} 启用这个 Mixin，{@code false} 禁用这个 Mixin
      */
     @Override
@@ -57,7 +59,8 @@ public final class MixinConfigPlugin implements IMixinConfigPlugin {
     }
 
     @Override
-    public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {}
+    public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {
+    }
 
     @Override
     public List<String> getMixins() {
@@ -65,8 +68,10 @@ public final class MixinConfigPlugin implements IMixinConfigPlugin {
     }
 
     @Override
-    public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {}
+    public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+    }
 
     @Override
-    public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {}
+    public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+    }
 }

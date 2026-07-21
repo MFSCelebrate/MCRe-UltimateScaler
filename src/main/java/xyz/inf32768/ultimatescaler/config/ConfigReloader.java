@@ -23,6 +23,15 @@ public class ConfigReloader implements SimpleSynchronousResourceReloadListener {
     private static final ResourceLocation LISTENER_ID = ResourceLocation.fromNamespaceAndPath("ultimate_scaler", "config_reloader");
 
     /**
+     * 初始化方法，在游戏启动时调用，注册重载的监听器。
+     *
+     * @see UltimateScaler#onInitialize()
+     */
+    public static void init() {
+        ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new ConfigReloader());
+    }
+
+    /**
      * 获取监听器 ID 的方法，这是 {@link SimpleSynchronousResourceReloadListener} 接口的要求。
      */
     @Override
@@ -46,15 +55,7 @@ public class ConfigReloader implements SimpleSynchronousResourceReloadListener {
         return SimpleSynchronousResourceReloadListener.super.reload(preparationBarrier, resourceManager, executor, executor2);
     }
 
-    /**
-     * 初始化方法，在游戏启动时调用，注册重载的监听器。
-     *
-     * @see UltimateScaler#onInitialize()
-     */
-    public static void init() {
-        ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new ConfigReloader());
-    }
-
     @Override
-    public void onResourceManagerReload(net.minecraft.server.packs.resources.ResourceManager resourceManager) {}
+    public void onResourceManagerReload(net.minecraft.server.packs.resources.ResourceManager resourceManager) {
+    }
 }

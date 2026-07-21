@@ -1,9 +1,9 @@
 package xyz.inf32768.ultimatescaler.mixin.border;
 
+import net.minecraft.server.commands.WorldBorderCommand;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
-import net.minecraft.server.commands.WorldBorderCommand;
 import xyz.inf32768.ultimatescaler.config.Config;
 
 /**
@@ -21,8 +21,8 @@ public abstract class MixinWorldBorderCommand {
     @ModifyArgs(method = "register", at = @At(value = "INVOKE", target = "Lcom/mojang/brigadier/arguments/DoubleArgumentType;doubleArg(DD)Lcom/mojang/brigadier/arguments/DoubleArgumentType;", remap = false))
     private static void modifyDoubleArg(Args args) {
         if (Config.impl.expandWorldBorder) {
-            args.set(0,Double.NEGATIVE_INFINITY);
-            args.set(1,Double.POSITIVE_INFINITY);
+            args.set(0, Double.NEGATIVE_INFINITY);
+            args.set(1, Double.POSITIVE_INFINITY);
         }
     }
 

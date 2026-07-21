@@ -1,6 +1,13 @@
 package xyz.inf32768.ultimatescaler.client.config;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import me.shedaniel.clothconfig2.api.*;
+import me.shedaniel.clothconfig2.gui.entries.*;
+import me.shedaniel.clothconfig2.impl.builders.DropdownMenuBuilder;
+import me.shedaniel.clothconfig2.impl.builders.StringListBuilder;
+import me.shedaniel.clothconfig2.impl.builders.SubCategoryBuilder;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.SystemToast;
@@ -9,20 +16,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import org.lwjgl.glfw.GLFW;
 import xyz.inf32768.ultimatescaler.config.Config;
 import xyz.inf32768.ultimatescaler.config.ConfigManager;
 import xyz.inf32768.ultimatescaler.versionutil.RegistryAccessor;
 import xyz.inf32768.ultimatescaler.versionutil.TextEventFactory;
 import xyz.inf32768.ultimatescaler.versionutil.VersionUtil;
-import me.shedaniel.clothconfig2.api.*;
-import me.shedaniel.clothconfig2.gui.entries.*;
-import me.shedaniel.clothconfig2.impl.builders.DropdownMenuBuilder;
-import me.shedaniel.clothconfig2.impl.builders.StringListBuilder;
-import me.shedaniel.clothconfig2.impl.builders.SubCategoryBuilder;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-
-import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -53,6 +52,7 @@ public class ClothConfigBuilder {
 
     /**
      * 定义配置界面，包括其中的配置项和常见问题的部分，以及保存的逻辑。
+     *
      * @return 配置界面构建器，共 Cloth Config API 使用。
      * @see Config.ConfigImpl
      */
