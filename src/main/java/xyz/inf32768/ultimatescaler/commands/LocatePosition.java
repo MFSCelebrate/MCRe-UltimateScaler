@@ -35,7 +35,7 @@ public class LocatePosition {
                         .then(argument("originalPos", DoubleArgumentType.doubleArg())
                                 .then(argument("scale", DoubleArgumentType.doubleArg())
                                         .then(argument("offset", DoubleArgumentType.doubleArg())
-                                                .executes(context -> {calculate(DoubleArgumentType.getDouble(context, "originalPos"), DoubleArgumentType.getDouble(context, "scale"), DoubleArgumentType.getDouble(context, "offset"), context); return 1;}
+                                                .executes(context -> calculate(DoubleArgumentType.getDouble(context, "originalPos"), DoubleArgumentType.getDouble(context, "scale"), DoubleArgumentType.getDouble(context, "offset"), context)
                                                 )
                                         )
                                 )
@@ -50,14 +50,16 @@ public class LocatePosition {
      * @param scale 缩放比例，不可为 0
      * @param offset 偏移量
      * @param context 命令上下文，用于在聊天栏中反馈结果，在游戏中执行时会自动填入。
+     * @return 找到的坐标（被钳制在 {@code int} 范围内，饱和溢出）
      */
-    public static void calculate(double pos, double scale, double offset, CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    public static int calculate(double pos, double scale, double offset, CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         if (scale == 0) throw SCALE_INVALID_EXCEPTION.create();
         BigInteger ans = smallestWrappedInteger(pos, scale, offset);
         context.getSource().sendSuccess(
                 () -> Component.translatable("ultimatescaler.commands.locate.pos.success", ans.toString()),
                 false
         );
+        return (int) ans.doubleValue();
     }
 
     /**
