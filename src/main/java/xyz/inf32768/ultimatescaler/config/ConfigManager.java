@@ -32,7 +32,7 @@ public class ConfigManager {
     public static Config config;
 
     static {
-        loadConfig();
+        loadConfig(); // 此类加载了很可能是因为有谁要获取配置值，此时几乎必须读取配置否则空指针异常
     }
 
     /**

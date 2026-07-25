@@ -2,6 +2,7 @@ package xyz.inf32768.ultimatescaler;
 
 import net.fabricmc.api.ModInitializer;
 import xyz.inf32768.ultimatescaler.commands.LocatePosition;
+import xyz.inf32768.ultimatescaler.config.Config;
 import xyz.inf32768.ultimatescaler.config.ConfigManager;
 import xyz.inf32768.ultimatescaler.config.ConfigReloader;
 
@@ -19,9 +20,9 @@ public class UltimateScaler implements ModInitializer {
     @Override
     public void onInitialize() {
         try {
-            ConfigManager.saveConfig();
-        } catch (IOException e) {
-            ModMetadata.LOGGER.error("Couldn't save config", e);
+            Class.forName(Config.class.getName());
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e); // 这怎么可能呢
         }
 
         if (ModMetadata.IS_FABRIC_API_PRESENT) {
