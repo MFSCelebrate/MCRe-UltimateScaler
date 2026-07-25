@@ -2,7 +2,7 @@ package xyz.inf32768.ultimatescaler;
 
 import net.fabricmc.api.ModInitializer;
 import xyz.inf32768.ultimatescaler.commands.LocatePosition;
-import xyz.inf32768.ultimatescaler.config.Config;
+import xyz.inf32768.ultimatescaler.config.ConfigManager;
 import xyz.inf32768.ultimatescaler.config.ConfigReloader;
 
 import java.io.IOException;
@@ -16,19 +16,19 @@ import java.io.IOException;
  * </ol>
  */
 public class UltimateScaler implements ModInitializer {
-	@Override
-	public void onInitialize() {
+    @Override
+    public void onInitialize() {
         try {
-            Config.saveConfig();
+            ConfigManager.saveConfig();
         } catch (IOException e) {
             ModMetadata.LOGGER.error("Couldn't save config", e);
         }
 
         if (ModMetadata.IS_FABRIC_API_PRESENT) {
-			ConfigReloader.init();
-			LocatePosition.init();
-		} else {
-			ModMetadata.LOGGER.warn("Fabric API is not present, some core features may not work properly!");
-		}
+            ConfigReloader.init();
+            LocatePosition.init();
+        } else {
+            ModMetadata.LOGGER.warn("Fabric API is not present, some core features may not work properly!");
+        }
     }
 }

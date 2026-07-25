@@ -8,7 +8,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import org.lwjgl.glfw.GLFW;
-import xyz.inf32768.ultimatescaler.config.Config;
+import xyz.inf32768.ultimatescaler.config.ConfigManager;
 
 /**
  * 快捷键实用类，支持识别包含 {@code Ctrl}、{@code Shift} 和 {@code Alt} 的组合按键。
@@ -46,8 +46,8 @@ public class KeyBindings {
         if (ModMetadata.IS_CLOTH_CONFIG_PRESENT) { // 仅在 Cloth Config API 安装时才可打开配置界面
             ClientTickEvents.END_CLIENT_TICK.register(client -> {
                 // 不知道为什么，这里的KeyBinding.isPressed()只能检测到一个按键，所以只能用InputConstants.isKeyDown()来判断组合按键是否被按下
-                if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), Config.impl.optionMenuKeyCode) && Minecraft.getInstance().screen == null) {
-                    if (isCtrlPressed() == Modifier.of(Config.impl.optionMenuModifierValue).hasControl() && isShiftPressed() == Modifier.of(Config.impl.optionMenuModifierValue).hasShift() && isAltPressed() == Modifier.of(Config.impl.optionMenuModifierValue).hasAlt()) {
+                if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), ConfigManager.impl.optionMenuKeyCode) && Minecraft.getInstance().screen == null) {
+                    if (isCtrlPressed() == Modifier.of(ConfigManager.impl.optionMenuModifierValue).hasControl() && isShiftPressed() == Modifier.of(ConfigManager.impl.optionMenuModifierValue).hasShift() && isAltPressed() == Modifier.of(ConfigManager.impl.optionMenuModifierValue).hasAlt()) {
                         Minecraft.getInstance().setScreen(ClothConfigBuilder.getConfigBuilder().build());
                     }
                 }

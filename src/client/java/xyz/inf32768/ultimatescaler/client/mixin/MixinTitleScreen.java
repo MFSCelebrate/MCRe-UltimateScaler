@@ -5,7 +5,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import xyz.inf32768.ultimatescaler.config.Config;
+import xyz.inf32768.ultimatescaler.config.ConfigManager;
 
 import java.io.IOException;
 
@@ -21,6 +21,6 @@ public abstract class MixinTitleScreen {
      */
     @Inject(method = "init", at = @At("HEAD"))
     private void modifyTitleScreen(CallbackInfo info) throws IOException {
-        Config.saveConfig();
+        ConfigManager.saveConfig();
     }
 }

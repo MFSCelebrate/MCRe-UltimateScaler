@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import org.lwjgl.glfw.GLFW;
 import xyz.inf32768.ultimatescaler.config.Config;
+import xyz.inf32768.ultimatescaler.config.ConfigManager;
 import xyz.inf32768.ultimatescaler.versionutil.RegistryAccessor;
 import xyz.inf32768.ultimatescaler.versionutil.TextEventFactory;
 import xyz.inf32768.ultimatescaler.versionutil.VersionUtil;
@@ -60,10 +61,10 @@ public class ClothConfigBuilder {
         builder.setGlobalized(true);
         ConfigEntryBuilder entryBuilder = builder.entryBuilder();
         ConfigCategory general = builder.getOrCreateCategory(Component.translatable("ultimatescaler.config.general"));
-        KeyCodeEntry optionMenuEntry = entryBuilder.startModifierKeyCodeField(Component.translatable("ultimatescaler.config.general.optionMenuKey"), ModifierKeyCode.of(InputConstants.Type.KEYSYM.getOrCreate(Config.impl.optionMenuKeyCode), Modifier.of(Config.impl.optionMenuModifierValue)))
+        KeyCodeEntry optionMenuEntry = entryBuilder.startModifierKeyCodeField(Component.translatable("ultimatescaler.config.general.optionMenuKey"), ModifierKeyCode.of(InputConstants.Type.KEYSYM.getOrCreate(ConfigManager.impl.optionMenuKeyCode), Modifier.of(ConfigManager.impl.optionMenuModifierValue)))
                 .setDefaultValue(ModifierKeyCode.of(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_U), Modifier.of(false, true, false)))
                 .build();
-        BooleanListEntry showTerrainPosEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.general.showTerrainPos"), Config.impl.showTerrainPos)
+        BooleanListEntry showTerrainPosEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.general.showTerrainPos"), ConfigManager.impl.showTerrainPos)
                 .setDefaultValue(true)
                 .build();
 
@@ -73,14 +74,14 @@ public class ClothConfigBuilder {
         ConfigCategory worldGen = builder.getOrCreateCategory(Component.translatable("ultimatescaler.config.worldgen"));
 
         TextListEntry worldGenHeader = entryBuilder.startTextDescription(Component.translatable("ultimatescaler.config.worldgen.header").withStyle(s -> s.withBold(true).withColor(ChatFormatting.YELLOW))).build();
-        StringListListEntry globalOffsetEntry = entryBuilder.startStrList(Component.translatable("ultimatescaler.config.worldgen.offset.globalOffset"), Arrays.stream(Config.impl.globalBigDecimalOffset).map(BigDecimal::toString).toList())
+        StringListListEntry globalOffsetEntry = entryBuilder.startStrList(Component.translatable("ultimatescaler.config.worldgen.offset.globalOffset"), Arrays.stream(ConfigManager.impl.globalBigDecimalOffset).map(BigDecimal::toString).toList())
                 .setTooltip(Component.translatable("ultimatescaler.config.parsableDecimal.tooltip"))
                 .setDefaultValue(Arrays.asList("0", "0", "0"))
                 .setInsertButtonEnabled(false)
                 .setDeleteButtonEnabled(false)
                 .setCellErrorSupplier(DECIMAL_CELL_ERROR_SUPPLIER)
                 .build();
-        StringListListEntry globalScaleEntry = entryBuilder.startStrList(Component.translatable("ultimatescaler.config.worldgen.offset.globalScale"), Arrays.stream(Config.impl.globalBigDecimalScale).map(BigDecimal::toString).toList())
+        StringListListEntry globalScaleEntry = entryBuilder.startStrList(Component.translatable("ultimatescaler.config.worldgen.offset.globalScale"), Arrays.stream(ConfigManager.impl.globalBigDecimalScale).map(BigDecimal::toString).toList())
                 .setTooltip(Component.translatable("ultimatescaler.config.parsableDecimal.tooltip"))
                 .setDefaultValue(Arrays.asList("1", "1", "1"))
                 .setInsertButtonEnabled(false)
@@ -89,34 +90,34 @@ public class ClothConfigBuilder {
                 .build();
         try {
             // farLandsPos 项在配置文件中以字符串形式存储，可能无法对应到枚举中的项，因此需要处理空指针异常防止无法构建
-            entryBuilder.startEnumSelector(Component.translatable("ultimatescaler.config.worldgen.farLandsPos"), Config.FarLandsPos.class, Config.impl.farLandsPos);
+            entryBuilder.startEnumSelector(Component.translatable("ultimatescaler.config.worldgen.farLandsPos"), Config.FarLandsPos.class, ConfigManager.impl.farLandsPos);
         } catch (NullPointerException e) {
-            Config.impl.farLandsPos = Config.FarLandsPos.DEFAULT;
+            ConfigManager.impl.farLandsPos = Config.FarLandsPos.DEFAULT;
         }
-        EnumListEntry<Config.FarLandsPos> farLandsPosEntry = entryBuilder.startEnumSelector(Component.translatable("ultimatescaler.config.worldgen.farLandsPos"), Config.FarLandsPos.class, Config.impl.farLandsPos)
+        EnumListEntry<Config.FarLandsPos> farLandsPosEntry = entryBuilder.startEnumSelector(Component.translatable("ultimatescaler.config.worldgen.farLandsPos"), Config.FarLandsPos.class, ConfigManager.impl.farLandsPos)
                 .setDefaultValue(Config.FarLandsPos.DEFAULT)
                 .setEnumNameProvider((farLandsPos) -> Component.translatable("ultimatescaler.config.worldgen.FarLandsPos." + farLandsPos.name()))
                 .setTooltipSupplier((FarLandsPos) -> Optional.of(new Component[]{Component.translatable("ultimatescaler.config.worldgen.FarLandsPos." + FarLandsPos.name() + ".tooltip")}))
                 .build();
-        DoubleListEntry maintainPrecisionCustomDivisorEntry = entryBuilder.startDoubleField(Component.translatable("ultimatescaler.config.worldgen.maintainPrecisionCustomDivisor"), Config.impl.maintainPrecisionCustomDivisor)
+        DoubleListEntry maintainPrecisionCustomDivisorEntry = entryBuilder.startDoubleField(Component.translatable("ultimatescaler.config.worldgen.maintainPrecisionCustomDivisor"), ConfigManager.impl.maintainPrecisionCustomDivisor)
                 .setDefaultValue(33554432)
                 .setMin(0.0)
                 .setTooltip(Component.translatable("ultimatescaler.config.worldgen.maintainPrecisionCustomDivisor.tooltip"))
                 .setDisplayRequirement(Requirement.all(() -> farLandsPosEntry.getValue().equals(Config.FarLandsPos.CUSTOM)))
                 .build();
-        BooleanListEntry limitReturnValueEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.limitReturnValue"), Config.impl.limitReturnValue)
+        BooleanListEntry limitReturnValueEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.limitReturnValue"), ConfigManager.impl.limitReturnValue)
                 .setDefaultValue(false)
                 .build();
-        IntegerListEntry maxNoiseValueEntry = entryBuilder.startIntField(Component.translatable("ultimatescaler.config.worldgen.maxNoiseLogarithmValue"), Config.impl.maxNoiseLogarithmValue)
+        IntegerListEntry maxNoiseValueEntry = entryBuilder.startIntField(Component.translatable("ultimatescaler.config.worldgen.maxNoiseLogarithmValue"), ConfigManager.impl.maxNoiseLogarithmValue)
                 .setDefaultValue(7)
                 .setTooltip(Component.translatable("ultimatescaler.config.worldgen.maxNoiseLogarithmValue.tooltip"))
                 .setDisplayRequirement(Requirement.all(limitReturnValueEntry::getValue))
                 .build();
-        BooleanListEntry replaceDefaultFluidEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.replaceDefaultFluid"), Config.impl.replaceDefaultFluid)
+        BooleanListEntry replaceDefaultFluidEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.replaceDefaultFluid"), ConfigManager.impl.replaceDefaultFluid)
                 .setDefaultValue(false)
                 .setTooltip(Component.translatable("ultimatescaler.config.worldgen.replaceDefaultFluid.tooltip"))
                 .build();
-        DropdownBoxEntry<Block> replaceDefaultFluidBlockEntry = entryBuilder.startDropdownMenu(Component.empty(), DropdownMenuBuilder.TopCellElementBuilder.ofBlockObject(RegistryAccessor.get(BuiltInRegistries.BLOCK, ResourceLocation.parse(Config.impl.replaceDefaultFluidBlock))), DropdownMenuBuilder.CellCreatorBuilder.ofBlockObject())
+        DropdownBoxEntry<Block> replaceDefaultFluidBlockEntry = entryBuilder.startDropdownMenu(Component.empty(), DropdownMenuBuilder.TopCellElementBuilder.ofBlockObject(RegistryAccessor.get(BuiltInRegistries.BLOCK, ResourceLocation.parse(ConfigManager.impl.replaceDefaultFluidBlock))), DropdownMenuBuilder.CellCreatorBuilder.ofBlockObject())
                 .setDefaultValue(Blocks.AIR)
                 .setSelections(BuiltInRegistries.BLOCK.stream().sorted(Comparator.comparing(Block::toString)).collect(Collectors.toCollection(LinkedHashSet::new)))
                 .setDisplayRequirement(Requirement.all(replaceDefaultFluidEntry::getValue))
@@ -134,7 +135,7 @@ public class ClothConfigBuilder {
 
         SubCategoryBuilder experimental = entryBuilder.startSubCategory(Component.translatable("ultimatescaler.config.worldgen.experimental"));
         TextListEntry experimentalHeader = entryBuilder.startTextDescription(Component.translatable("ultimatescaler.config.worldgen.experimental.header").withStyle(s -> s.withBold(true).withColor(ChatFormatting.RED))).build();
-        BooleanListEntry bigIntegerRewriteEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.bigIntegerRewrite"), Config.impl.bigIntegerRewrite)
+        BooleanListEntry bigIntegerRewriteEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.bigIntegerRewrite"), ConfigManager.impl.bigIntegerRewrite)
                 .setDefaultValue(false)
                 .setTooltip(Component.translatable("ultimatescaler.config.worldgen.bigIntegerRewrite.tooltip.1")
                         .append(Component.translatable("ultimatescaler.config.worldgen.bigIntegerRewrite.tooltip.2").withStyle(s -> s.withColor(ChatFormatting.YELLOW)))
@@ -142,15 +143,15 @@ public class ClothConfigBuilder {
                         .append(Component.translatable("ultimatescaler.config.worldgen.bigIntegerRewrite.tooltip.4").withStyle(s -> s.withColor(ChatFormatting.GREEN)))
                 )
                 .build();
-        BooleanListEntry extraYOffsetEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.extraYOffset"), Config.impl.extraYOffset)
+        BooleanListEntry extraYOffsetEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.extraYOffset"), ConfigManager.impl.extraYOffset)
                 .setDefaultValue(false)
                 .setTooltip(Component.translatable("ultimatescaler.config.worldgen.extraYOffset.tooltip"))
                 .build();
-        BooleanListEntry replaceUndergroundLavaEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.replaceUndergroundLava"), Config.impl.replaceUndergroundLava)
+        BooleanListEntry replaceUndergroundLavaEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.replaceUndergroundLava"), ConfigManager.impl.replaceUndergroundLava)
                 .setDefaultValue(false)
                 .setTooltip(Component.translatable("ultimatescaler.config.worldgen.replaceUndergroundLava.tooltip"))
                 .build();
-        DropdownBoxEntry<Block> replaceUndergroundLavaBlockEntry = entryBuilder.startDropdownMenu(Component.empty(), DropdownMenuBuilder.TopCellElementBuilder.ofBlockObject(RegistryAccessor.get(BuiltInRegistries.BLOCK, ResourceLocation.parse(Config.impl.replaceUndergroundLavaBlock))), DropdownMenuBuilder.CellCreatorBuilder.ofBlockObject())
+        DropdownBoxEntry<Block> replaceUndergroundLavaBlockEntry = entryBuilder.startDropdownMenu(Component.empty(), DropdownMenuBuilder.TopCellElementBuilder.ofBlockObject(RegistryAccessor.get(BuiltInRegistries.BLOCK, ResourceLocation.parse(ConfigManager.impl.replaceUndergroundLavaBlock))), DropdownMenuBuilder.CellCreatorBuilder.ofBlockObject())
                 .setDefaultValue(Blocks.AIR)
                 .setSelections(BuiltInRegistries.BLOCK.stream().sorted(Comparator.comparing(Block::toString)).collect(Collectors.toCollection(LinkedHashSet::new)))
                 .setDisplayRequirement(Requirement.all(replaceUndergroundLavaEntry::getValue))
@@ -164,25 +165,25 @@ public class ClothConfigBuilder {
         worldGen.addEntry(experimental.build());
 
         ConfigCategory tweaks = builder.getOrCreateCategory(Component.translatable("ultimatescaler.config.tweaks"));
-        BooleanListEntry fixEndRingsEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.fixEndRings"), Config.impl.fixEndRings)
+        BooleanListEntry fixEndRingsEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.worldgen.fixEndRings"), ConfigManager.impl.fixEndRings)
                 .setDefaultValue(false)
                 .setTooltip(Component.translatable("ultimatescaler.config.worldgen.fixEndRings.tooltip"))
                 .build();
-        BooleanListEntry fixChunkGenerationOutOfBoundEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.tweaks.fixChunkGenerationOutOfBound"), Config.impl.fixChunkGenerationOutOfBound)
+        BooleanListEntry fixChunkGenerationOutOfBoundEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.tweaks.fixChunkGenerationOutOfBound"), ConfigManager.impl.fixChunkGenerationOutOfBound)
                 .setDefaultValue(true)
                 .setTooltip(Component.translatable("ultimatescaler.config.tweaks.fixChunkGenerationOutOfBound.tooltip"))
                 .build();
-        BooleanListEntry expandDatapackValueRangeEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.tweaks.expandDatapackValueRange"), Config.impl.expandDatapackValueRange)
+        BooleanListEntry expandDatapackValueRangeEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.tweaks.expandDatapackValueRange"), ConfigManager.impl.expandDatapackValueRange)
                 .setDefaultValue(true)
                 .setTooltip(Component.translatable("ultimatescaler.config.tweaks.expandDatapackValueRange.tooltip").append(Component.translatable("ultimatescaler.config.require_restart").withStyle(s -> s.withColor(ChatFormatting.GOLD))))
                 .requireRestart()
                 .build();
-        BooleanListEntry expandWorldBorderEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.tweaks.expandWorldBorder"), Config.impl.expandWorldBorder)
+        BooleanListEntry expandWorldBorderEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.tweaks.expandWorldBorder"), ConfigManager.impl.expandWorldBorder)
                 .setDefaultValue(true)
                 .setTooltip(Component.translatable("ultimatescaler.config.tweaks.expandWorldBorder.tooltip").append(Component.translatable("ultimatescaler.config.require_restart").withStyle(s -> s.withColor(ChatFormatting.GOLD))))
                 .requireRestart()
                 .build();
-        BooleanListEntry fixMineshaftCannotGenerateEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.tweaks.fixMineshaftCannotGenerate"), Config.impl.fixMineshaftCannotGenerate)
+        BooleanListEntry fixMineshaftCannotGenerateEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.tweaks.fixMineshaftCannotGenerate"), ConfigManager.impl.fixMineshaftCannotGenerate)
                 .setDefaultValue(true)
                 .setTooltip(Component.translatable("ultimatescaler.config.tweaks.fixMineshaftCannotGenerate.tooltip"))
                 .build();
@@ -237,28 +238,28 @@ public class ClothConfigBuilder {
 
         // 保存逻辑。将输入值保存到 Config.impl 实例中，再尝试保存到文件中
         builder.setSavingRunnable(() -> {
-            Config.impl.globalBigDecimalOffset = globalOffsetEntry.getValue().stream().map(BigDecimal::new).toArray(BigDecimal[]::new);
-            Config.impl.globalBigDecimalScale = globalScaleEntry.getValue().stream().map(BigDecimal::new).toArray(BigDecimal[]::new);
-            Config.impl.optionMenuKeyCode = optionMenuEntry.getValue().getKeyCode().getValue();
-            Config.impl.optionMenuModifierValue = optionMenuEntry.getValue().getModifier().getValue();
-            Config.impl.showTerrainPos = showTerrainPosEntry.getValue();
-            Config.impl.farLandsPos = farLandsPosEntry.getValue();
-            Config.impl.maintainPrecisionCustomDivisor = maintainPrecisionCustomDivisorEntry.getValue();
-            Config.impl.limitReturnValue = limitReturnValueEntry.getValue();
-            Config.impl.maxNoiseLogarithmValue = maxNoiseValueEntry.getValue();
-            Config.impl.replaceDefaultFluid = replaceDefaultFluidEntry.getValue();
-            Config.impl.replaceDefaultFluidBlock = BuiltInRegistries.BLOCK.getKey(replaceDefaultFluidBlockEntry.getValue()).toString();
-            Config.impl.replaceUndergroundLava = replaceUndergroundLavaEntry.getValue();
-            Config.impl.replaceUndergroundLavaBlock = BuiltInRegistries.BLOCK.getKey(replaceUndergroundLavaBlockEntry.getValue()).toString();
-            Config.impl.extraYOffset = extraYOffsetEntry.getValue();
-            Config.impl.bigIntegerRewrite = bigIntegerRewriteEntry.getValue();
-            Config.impl.fixEndRings = fixEndRingsEntry.getValue();
-            Config.impl.fixChunkGenerationOutOfBound = fixChunkGenerationOutOfBoundEntry.getValue();
-            Config.impl.expandDatapackValueRange = expandDatapackValueRangeEntry.getValue();
-            Config.impl.expandWorldBorder = expandWorldBorderEntry.getValue();
-            Config.impl.fixMineshaftCannotGenerate = fixMineshaftCannotGenerateEntry.getValue();
+            ConfigManager.impl.globalBigDecimalOffset = globalOffsetEntry.getValue().stream().map(BigDecimal::new).toArray(BigDecimal[]::new);
+            ConfigManager.impl.globalBigDecimalScale = globalScaleEntry.getValue().stream().map(BigDecimal::new).toArray(BigDecimal[]::new);
+            ConfigManager.impl.optionMenuKeyCode = optionMenuEntry.getValue().getKeyCode().getValue();
+            ConfigManager.impl.optionMenuModifierValue = optionMenuEntry.getValue().getModifier().getValue();
+            ConfigManager.impl.showTerrainPos = showTerrainPosEntry.getValue();
+            ConfigManager.impl.farLandsPos = farLandsPosEntry.getValue();
+            ConfigManager.impl.maintainPrecisionCustomDivisor = maintainPrecisionCustomDivisorEntry.getValue();
+            ConfigManager.impl.limitReturnValue = limitReturnValueEntry.getValue();
+            ConfigManager.impl.maxNoiseLogarithmValue = maxNoiseValueEntry.getValue();
+            ConfigManager.impl.replaceDefaultFluid = replaceDefaultFluidEntry.getValue();
+            ConfigManager.impl.replaceDefaultFluidBlock = BuiltInRegistries.BLOCK.getKey(replaceDefaultFluidBlockEntry.getValue()).toString();
+            ConfigManager.impl.replaceUndergroundLava = replaceUndergroundLavaEntry.getValue();
+            ConfigManager.impl.replaceUndergroundLavaBlock = BuiltInRegistries.BLOCK.getKey(replaceUndergroundLavaBlockEntry.getValue()).toString();
+            ConfigManager.impl.extraYOffset = extraYOffsetEntry.getValue();
+            ConfigManager.impl.bigIntegerRewrite = bigIntegerRewriteEntry.getValue();
+            ConfigManager.impl.fixEndRings = fixEndRingsEntry.getValue();
+            ConfigManager.impl.fixChunkGenerationOutOfBound = fixChunkGenerationOutOfBoundEntry.getValue();
+            ConfigManager.impl.expandDatapackValueRange = expandDatapackValueRangeEntry.getValue();
+            ConfigManager.impl.expandWorldBorder = expandWorldBorderEntry.getValue();
+            ConfigManager.impl.fixMineshaftCannotGenerate = fixMineshaftCannotGenerateEntry.getValue();
             try {
-                Config.saveConfig();
+                ConfigManager.saveConfig();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
