@@ -7,7 +7,6 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
-import xyz.inf32768.ultimatescaler.ModMetadata;
 import xyz.inf32768.ultimatescaler.config.ConfigManager;
 
 /**
@@ -46,15 +45,14 @@ public class KeyBindings {
      * 初始化并注册快捷键。目前仅有打开配置界面的快捷键。
      */
     public static void init() {
-        if (ModMetadata.IS_CLOTH_CONFIG_PRESENT) { // 仅在 Cloth Config API 安装时才可打开配置界面
-            ClientTickEvents.END_CLIENT_TICK.register(client -> {
-                // 不知道为什么，这里的KeyBinding.isPressed()只能检测到一个按键，所以只能用InputConstants.isKeyDown()来判断组合按键是否被按下
-                if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), ConfigManager.config.common.optionMenuKeyCode) && Minecraft.getInstance().screen == null) {
-                    if (isCtrlPressed() == Modifier.of(ConfigManager.config.common.optionMenuModifierValue).hasControl() && isShiftPressed() == Modifier.of(ConfigManager.config.common.optionMenuModifierValue).hasShift() && isAltPressed() == Modifier.of(ConfigManager.config.common.optionMenuModifierValue).hasAlt()) {
-                        Minecraft.getInstance().setScreen(ClothConfigBuilder.getConfigBuilder().build());
-                    }
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            // 不知道为什么，这里的KeyBinding.isPressed()只能检测到一个按键，所以只能用InputConstants.isKeyDown()来判断组合按键是否被按下
+            if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), ConfigManager.getKeyCode(ConfigManager.config.common.configScreenKeybind)) && Minecraft.getInstance().screen == null) {
+                Modifier modifier = Modifier.of(ConfigManager.getKeyModifier(ConfigManager.config.common.configScreenKeybind));
+                if (isCtrlPressed() == modifier.hasControl() && isShiftPressed() == modifier.hasShift() && isAltPressed() == modifier.hasAlt()) {
+                    Minecraft.getInstance().setScreen(ClothConfigBuilder.getConfigBuilder().build());
                 }
-            });
-        }
+            }
+        });
     }
 }

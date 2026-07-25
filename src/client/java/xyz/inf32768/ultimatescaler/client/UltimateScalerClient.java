@@ -14,7 +14,7 @@ import xyz.inf32768.ultimatescaler.client.config.KeyBindings;
 public class UltimateScalerClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
-        if (ModMetadata.IS_FABRIC_API_PRESENT) {
+        if (ModMetadata.IS_CLOTH_CONFIG_PRESENT) {
             KeyBindings.init();
         }
     }

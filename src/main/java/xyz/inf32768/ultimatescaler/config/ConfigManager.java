@@ -125,8 +125,7 @@ public class ConfigManager {
             configV3 = new Toml().read(CONFIG_FILE).to(Config.ConfigImpl.class);
         }
         Config configV4 = new Config();
-        configV4.common.optionMenuKeyCode = configV3.optionMenuKeyCode;
-        configV4.common.optionMenuModifierValue = configV3.optionMenuModifierValue;
+        configV4.common.configScreenKeybind = getModifiedKeyCode(configV3.optionMenuKeyCode, configV3.optionMenuModifierValue);
         configV4.common.publicTerrainPos = configV3.publicTerrainPos;
         configV4.common.showTerrainPos = configV3.showTerrainPos;
         configV4.worldGen.maintainPrecisionControl.farLandsPos = configV3.farLandsPos;
@@ -168,5 +167,17 @@ public class ConfigManager {
         newLines.add("# Check out our GitHub Wiki for detailed explanations of all the configuration options:\n# https://github.com/INF32768/UltimateScaler/wiki/UserGuide.Configuration.en\n\n");
         newLines.addAll(lines);
         Files.write(CONFIG_FILE.toPath(), newLines);
+    }
+
+    public static int getModifiedKeyCode(int keyCode, short modifier) {
+        return (keyCode << 3) | modifier & 0b111;
+    }
+
+    public static int getKeyCode(int modifiedKeyCode) {
+        return modifiedKeyCode >> 3;
+    }
+
+    public static short getKeyModifier(int modifiedKeyCode) {
+        return (short) (modifiedKeyCode & 0b111);
     }
 }

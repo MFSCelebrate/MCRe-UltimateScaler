@@ -62,7 +62,7 @@ public class ClothConfigBuilder {
         builder.setGlobalized(true);
         ConfigEntryBuilder entryBuilder = builder.entryBuilder();
         ConfigCategory general = builder.getOrCreateCategory(Component.translatable("ultimatescaler.config.general"));
-        KeyCodeEntry optionMenuEntry = entryBuilder.startModifierKeyCodeField(Component.translatable("ultimatescaler.config.general.optionMenuKey"), ModifierKeyCode.of(InputConstants.Type.KEYSYM.getOrCreate(ConfigManager.config.common.optionMenuKeyCode), Modifier.of(ConfigManager.config.common.optionMenuModifierValue)))
+        KeyCodeEntry optionMenuEntry = entryBuilder.startModifierKeyCodeField(Component.translatable("ultimatescaler.config.general.optionMenuKey"), ModifierKeyCode.of(InputConstants.Type.KEYSYM.getOrCreate(ConfigManager.config.common.configScreenKeybind >> 3), Modifier.of((short) (ConfigManager.config.common.configScreenKeybind & 0b111))))
                 .setDefaultValue(ModifierKeyCode.of(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_U), Modifier.of(false, true, false)))
                 .build();
         BooleanListEntry showTerrainPosEntry = entryBuilder.startBooleanToggle(Component.translatable("ultimatescaler.config.general.showTerrainPos"), ConfigManager.config.common.showTerrainPos)
@@ -241,8 +241,7 @@ public class ClothConfigBuilder {
         builder.setSavingRunnable(() -> {
             ConfigManager.config.worldGen.reposition.shift = globalOffsetEntry.getValue().stream().map(BigDecimal::new).toArray(BigDecimal[]::new);
             ConfigManager.config.worldGen.reposition.scale = globalScaleEntry.getValue().stream().map(BigDecimal::new).toArray(BigDecimal[]::new);
-            ConfigManager.config.common.optionMenuKeyCode = optionMenuEntry.getValue().getKeyCode().getValue();
-            ConfigManager.config.common.optionMenuModifierValue = optionMenuEntry.getValue().getModifier().getValue();
+            ConfigManager.config.common.configScreenKeybind = (optionMenuEntry.getValue().getKeyCode().getValue() << 3) | optionMenuEntry.getValue().getModifier().getValue();
             ConfigManager.config.common.showTerrainPos = showTerrainPosEntry.getValue();
             ConfigManager.config.worldGen.maintainPrecisionControl.farLandsPos = farLandsPosEntry.getValue();
             ConfigManager.config.worldGen.maintainPrecisionControl.customDivisor = maintainPrecisionCustomDivisorEntry.getValue();

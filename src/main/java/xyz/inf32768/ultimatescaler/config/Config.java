@@ -61,8 +61,7 @@ public final class Config {
     }
 
     public static class Common {
-        public int optionMenuKeyCode = GLFW.GLFW_KEY_U;
-        public short optionMenuModifierValue = 2;
+        public int configScreenKeybind = (GLFW.GLFW_KEY_U << 3) | 2;
         public boolean showTerrainPos = true;
         public boolean publicTerrainPos = true;
     }
