@@ -16,6 +16,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 本模组的配置管理类，集中了配置文件的获取、加载和读取的功能。
+ * <p>
+ * 基于 {@link Toml} 实现。
+ *
+ * @see Config
+ * @since 0.4.0
+ */
 public class ConfigManager {
     private static final File CONFIG_FILE = FabricLoader.getInstance().getConfigDir().resolve("ultimate_scaler.toml").toFile();
     /**
@@ -29,6 +37,8 @@ public class ConfigManager {
 
     /**
      * 读取配置文件，并将读取到的配置选项的值赋值给 {@link ConfigManager#config} 实例。期间会检查并迁移旧版配置文件，并自动替换无效值。
+     *
+     * @see Toml#to(Class)
      */
     public static void loadConfig() {
         if (!CONFIG_FILE.exists()) {
@@ -84,9 +94,10 @@ public class ConfigManager {
     }
 
     /**
-     * 将 {@link ConfigManager#config} 实例中的配置选项的值写入配置文件。若配置文件不存在，则会自动创建。
+     * 将 {@link ConfigManager#config} 实例中的配置选项的值写入配置文件，并在文件开头添加链接。若配置文件不存在，则会自动创建。
      *
      * @throws IOException 配置文件读取或写入时出错
+     * @see TomlWriter#write(Object, File)
      */
     public static void saveConfig() throws IOException {
         if (!CONFIG_FILE.exists()) {

@@ -1,12 +1,15 @@
 package xyz.inf32768.ultimatescaler.config;
 
-import com.moandjiezana.toml.Toml;
 import org.lwjgl.glfw.GLFW;
 
 import java.math.BigDecimal;
 
 /**
- * 本模组的配置类，集中了所有配置选项的定义和加载、读取配置文件的功能。
+ * 所有配置选项的定义类，定义了所有配置选项的名称、类型和默认值。使用层次化的类结构组织，可以使生成的配置文件井井有条。
+ * <p>
+ * 有关配置选项的详细说明，请参考 Wiki 中的页面<a href="https://github.com/INF32768/UltimateScaler/wiki/UserGuide.Configuration.zh">《配置全解》</a>。
+ *
+ * @see ConfigManager
  */
 public final class Config {
     public int CONFIG_VERSION = 4;
@@ -26,11 +29,11 @@ public final class Config {
         CUSTOM
     }
 
-    /**
-     * 所有配置选项的定义类，定义了所有配置选项的名称、类型和默认值。这样定义的好处是可以用 {@link Toml#to(Class)} 自动将配置文件转换为配置实例。
-     * <p>
-     * 有关配置选项的详细说明，请参考 Wiki 中的页面<a href="https://github.com/INF32768/UltimateScaler/wiki/UserGuide.Configuration.zh">《配置全解》</a>。
-     */
+//    /**
+//     * 旧版的配置选项定义类。目前仅用于旧版配置文件的升级。
+//     * @deprecated 杂乱无章、难以持续。请使用新版 {@link Config} 代替。
+//     */
+//    @Deprecated(since = "0.4.0")
 //    public static class ConfigImpl {
 //        public int CONFIG_VERSION = 3;
 //        public BigDecimal[] globalBigDecimalOffset = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
