@@ -12,6 +12,8 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class ConfigManager {
@@ -92,5 +94,12 @@ public class ConfigManager {
             ModMetadata.LOGGER.info("Created new config file at {}", CONFIG_FILE.getAbsolutePath());
         }
         new TomlWriter().write(Objects.requireNonNull(config), CONFIG_FILE);
+
+        // 在文件开头添加 Wiki 引导
+        List<String> lines = Files.readAllLines(CONFIG_FILE.toPath());
+        List<String> newLines = new ArrayList<>();
+        newLines.add("# Check out our GitHub Wiki for detailed explanations of all the configuration options:\n# https://github.com/INF32768/UltimateScaler/wiki/UserGuide.Configuration.en\n\n");
+        newLines.addAll(lines);
+        Files.write(CONFIG_FILE.toPath(), newLines);
     }
 }
