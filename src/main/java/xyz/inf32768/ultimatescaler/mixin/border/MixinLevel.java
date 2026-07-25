@@ -26,7 +26,7 @@ public abstract class MixinLevel {
      */
     @Inject(method = "isInSpawnableBounds", at = @At("HEAD"), cancellable = true)
     private static void modifyIsValid(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
-        if (ConfigManager.impl.expandWorldBorder) {
+        if (ConfigManager.config.fixesAndExpansion.expandWorldBorder) {
             cir.setReturnValue(true);
         }
     }
@@ -40,7 +40,7 @@ public abstract class MixinLevel {
      */
     @Inject(method = "isInWorldBoundsHorizontal", at = @At("HEAD"), cancellable = true)
     private static void modifyIsValidHorizontally(CallbackInfoReturnable<Boolean> cir) {
-        if (ConfigManager.impl.expandWorldBorder) {
+        if (ConfigManager.config.fixesAndExpansion.expandWorldBorder) {
             cir.setReturnValue(true);
         }
     }
@@ -54,7 +54,7 @@ public abstract class MixinLevel {
      */
     @ModifyConstant(method = "getHeight", constant = @Constant(intValue = -30000000))
     private int modifyMinCoordinate(int original) {
-        return ConfigManager.impl.expandWorldBorder ? Integer.MIN_VALUE : original;
+        return ConfigManager.config.fixesAndExpansion.expandWorldBorder ? Integer.MIN_VALUE : original;
     }
 
     /**
@@ -62,6 +62,6 @@ public abstract class MixinLevel {
      */
     @ModifyConstant(method = "getHeight", constant = @Constant(intValue = 30000000))
     private int modifyMaxCoordinate(int original) {
-        return ConfigManager.impl.expandWorldBorder ? Integer.MAX_VALUE : original;
+        return ConfigManager.config.fixesAndExpansion.expandWorldBorder ? Integer.MAX_VALUE : original;
     }
 }

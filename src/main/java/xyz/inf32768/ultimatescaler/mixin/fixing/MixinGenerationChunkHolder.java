@@ -22,7 +22,7 @@ public abstract class MixinGenerationChunkHolder {
      */
     @ModifyArgs(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/ChunkPos;getChessboardDistance(Lnet/minecraft/world/level/ChunkPos;)I"))
     private void modifyInit(Args args, ChunkPos pos) {
-        if (ConfigManager.impl.fixChunkGenerationOutOfBound) {
+        if (ConfigManager.config.fixesAndExpansion.fixChunkGenerationOutOfBound) {
             args.set(0, pos);
         }
     }

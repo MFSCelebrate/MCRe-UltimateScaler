@@ -21,7 +21,7 @@ public abstract class MixinServerGamePacketListenerImpl {
      */
     @Inject(method = "clampHorizontal", at = @At("HEAD"), cancellable = true)
     private static void modifyClampHorizontal(double d, CallbackInfoReturnable<Double> cir) {
-        if (ConfigManager.impl.expandWorldBorder) {
+        if (ConfigManager.config.fixesAndExpansion.expandWorldBorder) {
             cir.setReturnValue(d);
         }
     }
@@ -35,7 +35,7 @@ public abstract class MixinServerGamePacketListenerImpl {
      */
     @Inject(method = "clampVertical", at = @At("HEAD"), cancellable = true)
     private static void modifyClampVertical(double d, CallbackInfoReturnable<Double> cir) {
-        if (ConfigManager.impl.expandWorldBorder) {
+        if (ConfigManager.config.fixesAndExpansion.expandWorldBorder) {
             cir.setReturnValue(d);
         }
     }

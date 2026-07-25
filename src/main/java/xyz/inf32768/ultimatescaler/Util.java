@@ -32,11 +32,11 @@ public class Util {
      * @param pos  原坐标
      * @param axis 此坐标在空间中对应的轴
      * @return 偏移和缩放后的坐标
-     * @see xyz.inf32768.ultimatescaler.config.Config.ConfigImpl
+     * @see ConfigManager#config
      */
     @SuppressWarnings("unused")
     public static double RepositionDouble(double pos, Direction.Axis axis) {
-        return pos * ConfigManager.impl.globalBigDecimalScale[axis.ordinal()].doubleValue() + ConfigManager.impl.globalBigDecimalOffset[axis.ordinal()].doubleValue();
+        return pos * ConfigManager.config.worldGen.reposition.globalBigDecimalScale[axis.ordinal()].doubleValue() + ConfigManager.config.worldGen.reposition.globalBigDecimalOffset[axis.ordinal()].doubleValue();
     }
 
     /**
@@ -45,10 +45,10 @@ public class Util {
      * @param pos  原坐标
      * @param axis 此坐标在空间中对应的轴
      * @return 偏移和缩放后的坐标
-     * @see xyz.inf32768.ultimatescaler.config.Config.ConfigImpl
+     * @see ConfigManager#config
      */
     public static double RepositionDouble(int pos, Direction.Axis axis) {
-        return pos * ConfigManager.impl.globalBigDecimalScale[axis.ordinal()].doubleValue() + ConfigManager.impl.globalBigDecimalOffset[axis.ordinal()].doubleValue();
+        return pos * ConfigManager.config.worldGen.reposition.globalBigDecimalScale[axis.ordinal()].doubleValue() + ConfigManager.config.worldGen.reposition.globalBigDecimalOffset[axis.ordinal()].doubleValue();
     }
 
     /**
@@ -63,7 +63,7 @@ public class Util {
      */
     @SuppressWarnings("unused")
     public static BigDecimal RepositionBigDecimal(double pos, Direction.Axis axis) {
-        return BigDecimal.valueOf(pos).multiply(ConfigManager.impl.globalBigDecimalScale[axis.ordinal()]).add(ConfigManager.impl.globalBigDecimalOffset[axis.ordinal()]);
+        return BigDecimal.valueOf(pos).multiply(ConfigManager.config.worldGen.reposition.globalBigDecimalScale[axis.ordinal()]).add(ConfigManager.config.worldGen.reposition.globalBigDecimalOffset[axis.ordinal()]);
     }
 
     /**
@@ -77,6 +77,6 @@ public class Util {
      * @see #RepositionDouble(int, Direction.Axis)
      */
     public static BigDecimal RepositionBigDecimal(int pos, Direction.Axis axis) {
-        return BigDecimal.valueOf(pos).multiply(ConfigManager.impl.globalBigDecimalScale[axis.ordinal()]).add(ConfigManager.impl.globalBigDecimalOffset[axis.ordinal()]);
+        return BigDecimal.valueOf(pos).multiply(ConfigManager.config.worldGen.reposition.globalBigDecimalScale[axis.ordinal()]).add(ConfigManager.config.worldGen.reposition.globalBigDecimalOffset[axis.ordinal()]);
     }
 }

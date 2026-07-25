@@ -23,6 +23,6 @@ public abstract class MixinMinecraftServer {
      */
     @Inject(method = "getAbsoluteMaxWorldSize", at = @At("HEAD"), cancellable = true)
     private void modifyMaxWorldBorderRadius(CallbackInfoReturnable<Integer> cir) {
-        cir.setReturnValue(ConfigManager.impl.expandWorldBorder ? Integer.MAX_VALUE : 29999984);
+        cir.setReturnValue(ConfigManager.config.fixesAndExpansion.expandWorldBorder ? Integer.MAX_VALUE : 29999984);
     }
 }

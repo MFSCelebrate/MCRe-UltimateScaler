@@ -30,7 +30,7 @@ public abstract class MixinWorldBorder {
      */
     @Inject(method = "<init>", at = @At("RETURN"))
     private void onInit(CallbackInfo ci) {
-        if (ConfigManager.impl.expandWorldBorder) {
+        if (ConfigManager.config.fixesAndExpansion.expandWorldBorder) {
             this.setAbsoluteMaxSize(Integer.MAX_VALUE);
         }
     }
