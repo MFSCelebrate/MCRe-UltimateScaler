@@ -9,8 +9,6 @@ import me.shedaniel.clothconfig2.impl.builders.SubCategoryBuilder;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -18,7 +16,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import org.lwjgl.glfw.GLFW;
 import xyz.inf32768.ultimatescaler.config.Config;
-import xyz.inf32768.ultimatescaler.config.ConfigManager;
 import xyz.inf32768.ultimatescaler.versionutil.RegistryAccessor;
 import xyz.inf32768.ultimatescaler.versionutil.TextEventFactory;
 import xyz.inf32768.ultimatescaler.versionutil.VersionUtil;
@@ -94,7 +91,6 @@ public class ClothConfigBuilder {
             // farLandsPos 项在配置文件中以字符串形式存储，可能无法对应到枚举中的项，因此需要处理空指针异常防止无法构建
             entryBuilder.startEnumSelector(Component.translatable("ultimatescaler.config.worldgen.farLandsPos"), Config.FarLandsPos.class, Config.impl.farLandsPos);
         } catch (NullPointerException e) {
-            SystemToast.addOrUpdate(Minecraft.getInstance().getToastManager(), new SystemToast.SystemToastId(), Component.translatable("ultimatescaler.config.worldgen.offset.invalidInput"), Component.literal("For enum: " + ConfigManager.readString(Config.CONFIG_PATH, "farLandsPos")));
             Config.impl.farLandsPos = Config.FarLandsPos.DEFAULT;
         }
         EnumListEntry<Config.FarLandsPos> farLandsPosEntry = entryBuilder.startEnumSelector(Component.translatable("ultimatescaler.config.worldgen.farLandsPos"), Config.FarLandsPos.class, Config.impl.farLandsPos)
