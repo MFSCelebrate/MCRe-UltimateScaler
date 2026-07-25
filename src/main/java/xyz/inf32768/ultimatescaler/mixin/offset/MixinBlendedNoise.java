@@ -54,7 +54,7 @@ public abstract class MixinBlendedNoise {
      */
     @ModifyVariable(method = "compute", at = @At("STORE"), ordinal = 0)
     private double modifyBlockX(double x, DensityFunction.FunctionContext pos) {
-        return ConfigManager.config.worldGen.reposition.bigIntegerRewrite ? Util.RepositionBigDecimal(pos.blockX(), Direction.Axis.X).doubleValue() * getScaledXzScale() : Util.RepositionDouble(pos.blockX(), Direction.Axis.X) * getScaledXzScale();
+        return ConfigManager.config.worldGen.reposition.highPrecisionMode ? Util.RepositionBigDecimal(pos.blockX(), Direction.Axis.X).doubleValue() * getScaledXzScale() : Util.RepositionDouble(pos.blockX(), Direction.Axis.X) * getScaledXzScale();
     }
 
     /**
@@ -62,7 +62,7 @@ public abstract class MixinBlendedNoise {
      */
     @ModifyVariable(method = "compute", at = @At("STORE"), ordinal = 1)
     private double modifyBlockY(double y, DensityFunction.FunctionContext pos) {
-        return ConfigManager.config.worldGen.reposition.bigIntegerRewrite ? Util.RepositionBigDecimal(pos.blockY(), Direction.Axis.Y).doubleValue() * getScaledYScale() : Util.RepositionDouble(pos.blockY(), Direction.Axis.Y) * getScaledYScale();
+        return ConfigManager.config.worldGen.reposition.highPrecisionMode ? Util.RepositionBigDecimal(pos.blockY(), Direction.Axis.Y).doubleValue() * getScaledYScale() : Util.RepositionDouble(pos.blockY(), Direction.Axis.Y) * getScaledYScale();
     }
 
     /**
@@ -70,7 +70,7 @@ public abstract class MixinBlendedNoise {
      */
     @ModifyVariable(method = "compute", at = @At("STORE"), ordinal = 2)
     private double modifyBlockZ(double z, DensityFunction.FunctionContext pos) {
-        return ConfigManager.config.worldGen.reposition.bigIntegerRewrite ? Util.RepositionBigDecimal(pos.blockZ(), Direction.Axis.Z).doubleValue() * getScaledXzScale() : Util.RepositionDouble(pos.blockZ(), Direction.Axis.Z) * getScaledXzScale();
+        return ConfigManager.config.worldGen.reposition.highPrecisionMode ? Util.RepositionBigDecimal(pos.blockZ(), Direction.Axis.Z).doubleValue() * getScaledXzScale() : Util.RepositionDouble(pos.blockZ(), Direction.Axis.Z) * getScaledXzScale();
     }
 
     /**

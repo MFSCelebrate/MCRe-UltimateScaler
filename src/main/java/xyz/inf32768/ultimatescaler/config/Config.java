@@ -70,35 +70,35 @@ public final class Config {
     public static class WorldGen {
         public Reposition reposition = new Reposition();
         public FluidReplace fluidReplace = new FluidReplace();
-        public FarLandsControl farLandsControl = new FarLandsControl();
+        public maintainPrecisionControl maintainPrecisionControl = new maintainPrecisionControl();
 
         public static class Reposition {
-            public BigDecimal[] globalBigDecimalOffset = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
-            public BigDecimal[] globalBigDecimalScale = {BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE};
-            public boolean extraYOffset = false;
-            public boolean bigIntegerRewrite = false;
+            public BigDecimal[] shift = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
+            public BigDecimal[] scale = {BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE};
+            public boolean extendedYAxisEffect = false;
+            public boolean highPrecisionMode = false;
         }
 
         public static class FluidReplace {
-            public boolean replaceDefaultFluid = false;
+            public boolean defaultFluid = false;
             public String replaceDefaultFluidBlock = "minecraft:air";
             public boolean replaceUndergroundLava = false;
             public String replaceUndergroundLavaBlock = "minecraft:air";
         }
 
-        public static class FarLandsControl {
+        public static class maintainPrecisionControl {
             public FarLandsPos farLandsPos = FarLandsPos.DEFAULT;
-            public double maintainPrecisionCustomDivisor = 33554432;
+            public double customDivisor = 33554432;
             public boolean limitReturnValue = false;
-            public int maxNoiseLogarithmValue = 7;
+            public int maxLogarithmValue = 7;
         }
     }
 
     public static class FixesAndExpansion {
-        public boolean fixEndRings = false;
-        public boolean expandWorldBorder = true;
-        public boolean fixChunkGenerationOutOfBound = true;
-        public boolean fixMineshaftCannotGenerate = true;
+        public boolean endRings = false;
+        public boolean worldBorder = true;
+        public boolean chunkGenerationOutOfBound = true;
+        public boolean mineShaftCannotGenerate = true;
     }
 
     public static class Utilities {

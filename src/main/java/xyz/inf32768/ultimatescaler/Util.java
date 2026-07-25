@@ -36,7 +36,7 @@ public class Util {
      */
     @SuppressWarnings("unused")
     public static double RepositionDouble(double pos, Direction.Axis axis) {
-        return pos * ConfigManager.config.worldGen.reposition.globalBigDecimalScale[axis.ordinal()].doubleValue() + ConfigManager.config.worldGen.reposition.globalBigDecimalOffset[axis.ordinal()].doubleValue();
+        return pos * ConfigManager.config.worldGen.reposition.scale[axis.ordinal()].doubleValue() + ConfigManager.config.worldGen.reposition.shift[axis.ordinal()].doubleValue();
     }
 
     /**
@@ -48,7 +48,7 @@ public class Util {
      * @see ConfigManager#config
      */
     public static double RepositionDouble(int pos, Direction.Axis axis) {
-        return pos * ConfigManager.config.worldGen.reposition.globalBigDecimalScale[axis.ordinal()].doubleValue() + ConfigManager.config.worldGen.reposition.globalBigDecimalOffset[axis.ordinal()].doubleValue();
+        return pos * ConfigManager.config.worldGen.reposition.scale[axis.ordinal()].doubleValue() + ConfigManager.config.worldGen.reposition.shift[axis.ordinal()].doubleValue();
     }
 
     /**
@@ -63,7 +63,7 @@ public class Util {
      */
     @SuppressWarnings("unused")
     public static BigDecimal RepositionBigDecimal(double pos, Direction.Axis axis) {
-        return BigDecimal.valueOf(pos).multiply(ConfigManager.config.worldGen.reposition.globalBigDecimalScale[axis.ordinal()]).add(ConfigManager.config.worldGen.reposition.globalBigDecimalOffset[axis.ordinal()]);
+        return BigDecimal.valueOf(pos).multiply(ConfigManager.config.worldGen.reposition.scale[axis.ordinal()]).add(ConfigManager.config.worldGen.reposition.shift[axis.ordinal()]);
     }
 
     /**
@@ -77,6 +77,6 @@ public class Util {
      * @see #RepositionDouble(int, Direction.Axis)
      */
     public static BigDecimal RepositionBigDecimal(int pos, Direction.Axis axis) {
-        return BigDecimal.valueOf(pos).multiply(ConfigManager.config.worldGen.reposition.globalBigDecimalScale[axis.ordinal()]).add(ConfigManager.config.worldGen.reposition.globalBigDecimalOffset[axis.ordinal()]);
+        return BigDecimal.valueOf(pos).multiply(ConfigManager.config.worldGen.reposition.scale[axis.ordinal()]).add(ConfigManager.config.worldGen.reposition.shift[axis.ordinal()]);
     }
 }

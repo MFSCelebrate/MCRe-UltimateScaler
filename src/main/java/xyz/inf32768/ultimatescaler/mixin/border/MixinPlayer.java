@@ -21,7 +21,7 @@ public abstract class MixinPlayer {
      */
     @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;clamp(DDD)D"))
     private double redirectClamp(double value, double min, double max) {
-        if (ConfigManager.config.fixesAndExpansion.expandWorldBorder) {
+        if (ConfigManager.config.fixesAndExpansion.worldBorder) {
             return value;
         } else {
             return Mth.clamp(value, min, max);

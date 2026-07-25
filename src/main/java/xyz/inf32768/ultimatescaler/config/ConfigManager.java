@@ -90,7 +90,6 @@ public class ConfigManager {
             config.worldGen.fluidReplace.replaceDefaultFluidBlock = "minecraft:air";
             config.worldGen.fluidReplace.replaceUndergroundLavaBlock = "minecraft:air";
         }
-
     }
 
     /**
@@ -130,22 +129,22 @@ public class ConfigManager {
         configV4.common.optionMenuModifierValue = configV3.optionMenuModifierValue;
         configV4.common.publicTerrainPos = configV3.publicTerrainPos;
         configV4.common.showTerrainPos = configV3.showTerrainPos;
-        configV4.worldGen.farLandsControl.farLandsPos = configV3.farLandsPos;
-        configV4.worldGen.farLandsControl.limitReturnValue = configV3.limitReturnValue;
-        configV4.worldGen.farLandsControl.maintainPrecisionCustomDivisor = configV3.maintainPrecisionCustomDivisor;
-        configV4.worldGen.farLandsControl.maxNoiseLogarithmValue = configV3.maxNoiseLogarithmValue;
-        configV4.worldGen.reposition.bigIntegerRewrite = configV3.bigIntegerRewrite;
-        configV4.worldGen.reposition.extraYOffset = configV3.extraYOffset;
-        configV4.worldGen.reposition.globalBigDecimalOffset = configV3.globalBigDecimalOffset;
-        configV4.worldGen.reposition.globalBigDecimalScale = configV3.globalBigDecimalScale;
-        configV4.worldGen.fluidReplace.replaceDefaultFluid = configV3.replaceDefaultFluid;
+        configV4.worldGen.maintainPrecisionControl.farLandsPos = configV3.farLandsPos;
+        configV4.worldGen.maintainPrecisionControl.limitReturnValue = configV3.limitReturnValue;
+        configV4.worldGen.maintainPrecisionControl.customDivisor = configV3.maintainPrecisionCustomDivisor;
+        configV4.worldGen.maintainPrecisionControl.maxLogarithmValue = configV3.maxNoiseLogarithmValue;
+        configV4.worldGen.reposition.highPrecisionMode = configV3.bigIntegerRewrite;
+        configV4.worldGen.reposition.extendedYAxisEffect = configV3.extraYOffset;
+        configV4.worldGen.reposition.shift = configV3.globalBigDecimalOffset;
+        configV4.worldGen.reposition.scale = configV3.globalBigDecimalScale;
+        configV4.worldGen.fluidReplace.defaultFluid = configV3.replaceDefaultFluid;
         configV4.worldGen.fluidReplace.replaceUndergroundLava = configV3.replaceUndergroundLava;
         configV4.worldGen.fluidReplace.replaceDefaultFluidBlock = configV3.replaceDefaultFluidBlock;
         configV4.worldGen.fluidReplace.replaceUndergroundLavaBlock = configV3.replaceUndergroundLavaBlock;
-        configV4.fixesAndExpansion.expandWorldBorder = configV3.expandWorldBorder;
-        configV4.fixesAndExpansion.fixChunkGenerationOutOfBound = configV3.fixChunkGenerationOutOfBound;
-        configV4.fixesAndExpansion.fixEndRings = configV3.fixEndRings;
-        configV4.fixesAndExpansion.fixMineshaftCannotGenerate = configV3.fixMineshaftCannotGenerate;
+        configV4.fixesAndExpansion.worldBorder = configV3.expandWorldBorder;
+        configV4.fixesAndExpansion.chunkGenerationOutOfBound = configV3.fixChunkGenerationOutOfBound;
+        configV4.fixesAndExpansion.endRings = configV3.fixEndRings;
+        configV4.fixesAndExpansion.mineShaftCannotGenerate = configV3.fixMineshaftCannotGenerate;
         configV4.utilities.expandDatapackValueRange = configV3.expandDatapackValueRange;
         return configV4;
     }

@@ -53,13 +53,13 @@ public abstract class MixinDebugHud {
 
         // 计算坐标
         if (ConfigManager.config.common.showTerrainPos) {
-            if (!pos.equals(previousCamPos) || !Arrays.equals(ConfigManager.config.worldGen.reposition.globalBigDecimalOffset, previousOffset) || !Arrays.equals(ConfigManager.config.worldGen.reposition.globalBigDecimalScale, previousScale)) {
+            if (!pos.equals(previousCamPos) || !Arrays.equals(ConfigManager.config.worldGen.reposition.shift, previousOffset) || !Arrays.equals(ConfigManager.config.worldGen.reposition.scale, previousScale)) {
                 // 缓存变量与当前实际不一致，需重新计算并更新缓存
                 previousCamPos = pos;
-                previousOffset = ConfigManager.config.worldGen.reposition.globalBigDecimalOffset;
-                previousScale = ConfigManager.config.worldGen.reposition.globalBigDecimalScale;
+                previousOffset = ConfigManager.config.worldGen.reposition.shift;
+                previousScale = ConfigManager.config.worldGen.reposition.scale;
 
-                if (ConfigManager.config.worldGen.reposition.bigIntegerRewrite) {
+                if (ConfigManager.config.worldGen.reposition.highPrecisionMode) {
                     String x = Util.RepositionBigDecimal(pos.getX(), Direction.Axis.X).toString();
                     String y = Util.RepositionBigDecimal(pos.getY(), Direction.Axis.Y).toString();
                     String z = Util.RepositionBigDecimal(pos.getZ(), Direction.Axis.Z).toString();
@@ -73,7 +73,7 @@ public abstract class MixinDebugHud {
             }
 
             // 将条目添加到信息列表中
-            if (ConfigManager.config.worldGen.reposition.bigIntegerRewrite) {
+            if (ConfigManager.config.worldGen.reposition.highPrecisionMode) {
                 list.add(terrainPosLines[0]);
                 list.add(terrainPosLines[1]);
             } else {
