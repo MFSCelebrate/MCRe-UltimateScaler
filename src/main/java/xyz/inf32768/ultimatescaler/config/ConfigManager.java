@@ -58,7 +58,7 @@ public class ConfigManager {
                 else ModMetadata.LOGGER.info("Config file has been automatically updated from V3"); // 迁移成功，打印日志
             } catch (Exception e) {
                 // 配置文件格式错误，由于不知道是哪里出错，因此只打印错误信息，并使用默认配置
-                ModMetadata.LOGGER.error("Failed to load config file, resetting to default values", e);
+                ModMetadata.LOGGER.warn("Failed to load config file, using default values: ", e);
                 config = new Config();
                 try {
                     saveConfig();
@@ -86,7 +86,7 @@ public class ConfigManager {
             Objects.requireNonNull(RegistryAccessor.get(BuiltInRegistries.BLOCK, ResourceLocation.parse(config.worldGen.fluidReplace.replaceUndergroundLavaBlock)));
         } catch (NullPointerException e) {
             // 方块 ID 无效，使用默认值
-            ModMetadata.LOGGER.error("Failed to load block, resetting to default values: {}", e.getMessage());
+            ModMetadata.LOGGER.warn("Invalid block id, resetting to default values", e);
             config.worldGen.fluidReplace.replaceDefaultFluidBlock = "minecraft:air";
             config.worldGen.fluidReplace.replaceUndergroundLavaBlock = "minecraft:air";
         }
