@@ -43,20 +43,19 @@ public class ConfigManager {
     public static void loadConfig() {
         if (!CONFIG_FILE.exists()) {
             // 默认配置文件不存在
-            if (Files.exists(FabricLoader.getInstance().getConfigDir().resolve("ultimatescaler.toml"))) {
-                // 存在旧版配置文件，迁移配置
-                config = new Toml().read(FabricLoader.getInstance().getConfigDir().resolve("ultimatescaler.toml").toFile()).to(Config.class);
-                try {
-                    Files.deleteIfExists(FabricLoader.getInstance().getConfigDir().resolve("ultimatescaler.toml"));
-                } catch (IOException ignored) {
-                } // 文件删不掉，不管它
-            }
-            // 不存在任何配置文件，使用默认配置
-            config = new Config();
+            config = tryMigrateConfigV2(); // 尝试迁移 V2 配置文件
+            if (config == null) {
+                config = new Config(); // V2 配置文件迁移失败或不存在，使用默认配置
+                return;
+            } else ModMetadata.LOGGER.info("Config file has been automatically updated from V2"); // 迁移成功，打印日志
         } else {
+            // 存在配置文件，尝试读取配置
             try {
-                // 存在配置文件，尝试读取配置
-                config = new Toml().read(CONFIG_FILE).to(Config.class);
+                if (new Toml().read(CONFIG_FILE).getLong("CONFIG_VERSION") == 3)
+                    config = tryMigrateConfigV3(null); // 检测到配置文件为 V3，尝试迁移到 V4
+                if (config == null)
+                    config = new Toml().read(CONFIG_FILE).to(Config.class); // 迁移失败或配置文件为 V4，直接读取（若读取失败抛出异常则会使用默认配置）
+                else ModMetadata.LOGGER.info("Config file has been automatically updated from V3"); // 迁移成功，打印日志
             } catch (Exception e) {
                 // 配置文件格式错误，由于不知道是哪里出错，因此只打印错误信息，并使用默认配置
                 ModMetadata.LOGGER.error("Failed to load config file, resetting to default values", e);
@@ -68,29 +67,87 @@ public class ConfigManager {
                 }
                 return;
             }
-            // 执行到这，说明配置文件格式正确，接下来校验字段合法性
-            try {
-                for (Field entry : Config.class.getFields()) {
-                    if (entry.get(config) == null) {
-                        // 字段值为空，使用默认值
-                        ModMetadata.LOGGER.warn("Failed to load config entry, resetting to default value: {}", entry.getName());
-                        entry.set(config, Config.class.getField(entry.getName()).get(new Config()));
-                    }
-                }
-            } catch (IllegalAccessException | NoSuchFieldException e) {
-                throw new RuntimeException(e);
-            }
-            try {
-                // 确保配置文件中的方块 ID 有效
-                Objects.requireNonNull(RegistryAccessor.get(BuiltInRegistries.BLOCK, ResourceLocation.parse(config.worldGen.fluidReplace.replaceDefaultFluidBlock)));
-                Objects.requireNonNull(RegistryAccessor.get(BuiltInRegistries.BLOCK, ResourceLocation.parse(config.worldGen.fluidReplace.replaceUndergroundLavaBlock)));
-            } catch (NullPointerException e) {
-                // 方块 ID 无效，使用默认值
-                ModMetadata.LOGGER.error("Failed to load block, resetting to default values: {}", e.getMessage());
-                config.worldGen.fluidReplace.replaceDefaultFluidBlock = "minecraft:air";
-                config.worldGen.fluidReplace.replaceUndergroundLavaBlock = "minecraft:air";
-            }
         }
+        // 执行到这，配置文件格式已经正确，接下来校验字段合法性
+        try {
+            for (Field entry : Config.class.getFields()) {
+                if (entry.get(config) == null) {
+                    // 字段值为空，使用默认值
+                    ModMetadata.LOGGER.warn("Failed to load config entry, resetting to default value: {}", entry.getName());
+                    entry.set(config, Config.class.getField(entry.getName()).get(new Config()));
+                }
+            }
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            // 确保配置文件中的方块 ID 有效
+            Objects.requireNonNull(RegistryAccessor.get(BuiltInRegistries.BLOCK, ResourceLocation.parse(config.worldGen.fluidReplace.replaceDefaultFluidBlock)));
+            Objects.requireNonNull(RegistryAccessor.get(BuiltInRegistries.BLOCK, ResourceLocation.parse(config.worldGen.fluidReplace.replaceUndergroundLavaBlock)));
+        } catch (NullPointerException e) {
+            // 方块 ID 无效，使用默认值
+            ModMetadata.LOGGER.error("Failed to load block, resetting to default values: {}", e.getMessage());
+            config.worldGen.fluidReplace.replaceDefaultFluidBlock = "minecraft:air";
+            config.worldGen.fluidReplace.replaceUndergroundLavaBlock = "minecraft:air";
+        }
+
+    }
+
+    /**
+     * 尝试迁移旧版（V2）配置文件至最新版。会自动检查旧版配置文件是否存在，若存在则自动迁移。
+     *
+     * @return 迁移完成的配置文件。若不存在旧版配置文件则为 null。
+     */
+    @SuppressWarnings("deprecation")
+    private static Config tryMigrateConfigV2() {
+        final File configFileV2 = FabricLoader.getInstance().getConfigDir().resolve("ultimatescaler.toml").toFile();
+
+        if (!configFileV2.exists()) return null;
+
+        Config.ConfigImpl configV3 = new Toml().read(configFileV2).to(Config.ConfigImpl.class);
+        try {
+            Files.deleteIfExists(configFileV2.toPath());
+        } catch (IOException ignored) {
+        } // 文件删不掉，不管它
+
+        return tryMigrateConfigV3(configV3);
+    }
+
+    /**
+     * 尝试迁移旧版（V3）配置文件至最新版。
+     *
+     * @param configV3 可选的 V2 配置实例。若为 null，则尝试从配置文件中读取。
+     * @return 迁移完成的配置文件。若不存在旧版配置文件则为 null。
+     */
+    @SuppressWarnings("deprecation")
+    private static Config tryMigrateConfigV3(Config.ConfigImpl configV3) {
+        if (configV3 == null) {
+            if (!Files.exists(CONFIG_FILE.toPath())) return null;
+            configV3 = new Toml().read(CONFIG_FILE).to(Config.ConfigImpl.class);
+        }
+        Config configV4 = new Config();
+        configV4.common.optionMenuKeyCode = configV3.optionMenuKeyCode;
+        configV4.common.optionMenuModifierValue = configV3.optionMenuModifierValue;
+        configV4.common.publicTerrainPos = configV3.publicTerrainPos;
+        configV4.common.showTerrainPos = configV3.showTerrainPos;
+        configV4.worldGen.farLandsControl.farLandsPos = configV3.farLandsPos;
+        configV4.worldGen.farLandsControl.limitReturnValue = configV3.limitReturnValue;
+        configV4.worldGen.farLandsControl.maintainPrecisionCustomDivisor = configV3.maintainPrecisionCustomDivisor;
+        configV4.worldGen.farLandsControl.maxNoiseLogarithmValue = configV3.maxNoiseLogarithmValue;
+        configV4.worldGen.reposition.bigIntegerRewrite = configV3.bigIntegerRewrite;
+        configV4.worldGen.reposition.extraYOffset = configV3.extraYOffset;
+        configV4.worldGen.reposition.globalBigDecimalOffset = configV3.globalBigDecimalOffset;
+        configV4.worldGen.reposition.globalBigDecimalScale = configV3.globalBigDecimalScale;
+        configV4.worldGen.fluidReplace.replaceDefaultFluid = configV3.replaceDefaultFluid;
+        configV4.worldGen.fluidReplace.replaceUndergroundLava = configV3.replaceUndergroundLava;
+        configV4.worldGen.fluidReplace.replaceDefaultFluidBlock = configV3.replaceDefaultFluidBlock;
+        configV4.worldGen.fluidReplace.replaceUndergroundLavaBlock = configV3.replaceUndergroundLavaBlock;
+        configV4.fixesAndExpansion.expandWorldBorder = configV3.expandWorldBorder;
+        configV4.fixesAndExpansion.fixChunkGenerationOutOfBound = configV3.fixChunkGenerationOutOfBound;
+        configV4.fixesAndExpansion.fixEndRings = configV3.fixEndRings;
+        configV4.fixesAndExpansion.fixMineshaftCannotGenerate = configV3.fixMineshaftCannotGenerate;
+        configV4.utilities.expandDatapackValueRange = configV3.expandDatapackValueRange;
+        return configV4;
     }
 
     /**

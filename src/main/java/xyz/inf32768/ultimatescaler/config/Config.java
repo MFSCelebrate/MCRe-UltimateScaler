@@ -29,35 +29,36 @@ public final class Config {
         CUSTOM
     }
 
-//    /**
-//     * 旧版的配置选项定义类。目前仅用于旧版配置文件的升级。
-//     * @deprecated 杂乱无章、难以持续。请使用新版 {@link Config} 代替。
-//     */
-//    @Deprecated(since = "0.4.0")
-//    public static class ConfigImpl {
-//        public int CONFIG_VERSION = 3;
-//        public BigDecimal[] globalBigDecimalOffset = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
-//        public BigDecimal[] globalBigDecimalScale = {BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE};
-//        public int optionMenuKeyCode = GLFW.GLFW_KEY_U;
-//        public short optionMenuModifierValue = 2;
-//        public boolean showTerrainPos = true;
-//        public FarLandsPos farLandsPos = FarLandsPos.DEFAULT;
-//        public double maintainPrecisionCustomDivisor = 33554432;
-//        public boolean limitReturnValue = false;
-//        public int maxNoiseLogarithmValue = 7;
-//        public boolean extraYOffset = false;
-//        public boolean bigIntegerRewrite = false;
-//        public boolean fixEndRings = false;
-//        public boolean fixChunkGenerationOutOfBound = true;
-//        public boolean expandDatapackValueRange = true;
-//        public boolean expandWorldBorder = true;
-//        public boolean fixMineshaftCannotGenerate = true;
-//        public boolean replaceDefaultFluid = false;
-//        public String replaceDefaultFluidBlock = "minecraft:air";
-//        public boolean replaceUndergroundLava = false;
-//        public String replaceUndergroundLavaBlock = "minecraft:air";
-//        public boolean publicTerrainPos = true;
-//    }
+    /**
+     * 旧版的配置选项定义类。目前仅用于旧版配置文件的升级。
+     *
+     * @deprecated 杂乱无章、难以持续。请使用新版 {@link Config} 代替。
+     */
+    @Deprecated(since = "0.4.0")
+    public static class ConfigImpl {
+        public int CONFIG_VERSION = 3;
+        public BigDecimal[] globalBigDecimalOffset = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
+        public BigDecimal[] globalBigDecimalScale = {BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE};
+        public int optionMenuKeyCode = GLFW.GLFW_KEY_U;
+        public short optionMenuModifierValue = 2;
+        public boolean showTerrainPos = true;
+        public FarLandsPos farLandsPos = FarLandsPos.DEFAULT;
+        public double maintainPrecisionCustomDivisor = 33554432;
+        public boolean limitReturnValue = false;
+        public int maxNoiseLogarithmValue = 7;
+        public boolean extraYOffset = false;
+        public boolean bigIntegerRewrite = false;
+        public boolean fixEndRings = false;
+        public boolean fixChunkGenerationOutOfBound = true;
+        public boolean expandDatapackValueRange = true;
+        public boolean expandWorldBorder = true;
+        public boolean fixMineshaftCannotGenerate = true;
+        public boolean replaceDefaultFluid = false;
+        public String replaceDefaultFluidBlock = "minecraft:air";
+        public boolean replaceUndergroundLava = false;
+        public String replaceUndergroundLavaBlock = "minecraft:air";
+        public boolean publicTerrainPos = true;
+    }
 
     public static class Common {
         public int optionMenuKeyCode = GLFW.GLFW_KEY_U;
